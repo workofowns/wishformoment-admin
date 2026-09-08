@@ -136,14 +136,14 @@ export default function TemplateEditorPage() {
         templateData.category_ids && templateData.category_ids.length > 0
           ? templateData.category_ids
           : templateData.category_id
-          ? [templateData.category_id]
-          : [];
+            ? [templateData.category_id]
+            : [];
       const subCatIds: string[] =
         templateData.sub_category_ids && templateData.sub_category_ids.length > 0
           ? templateData.sub_category_ids
           : templateData.sub_category_id
-          ? [templateData.sub_category_id]
-          : [];
+            ? [templateData.sub_category_id]
+            : [];
 
       setSelectedCategoryIds(catIds);
       setSelectedSubCategoryIds(subCatIds);
@@ -501,7 +501,7 @@ export default function TemplateEditorPage() {
 
   return (
     <DashboardLayout>
-      <div className="w-full max-w-7xl mx-auto space-y-8 pb-20">
+      <div className="w-full max-w-[1600px] mx-auto space-y-8 pb-20 px-2 sm:px-4">
         {/* ── Top Header Navigation Bar ── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200">
           <div className="flex items-center gap-4">
@@ -562,8 +562,8 @@ export default function TemplateEditorPage() {
 
         {/* ── 2-Column Responsive Studio Layout ── */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* ════ LEFT COLUMN: Identity & Interactive Form Builder (7 cols) ════ */}
-          <div className="lg:col-span-7 space-y-8">
+          {/* ════ LEFT COLUMN: Identity & Interactive Form Builder (8 cols on large screens) ════ */}
+          <div className="lg:col-span-7 xl:col-span-8 space-y-8">
             {/* Card 1: Basic Identity & Categorization */}
             <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-xs space-y-6">
               <div className="flex items-center justify-between pb-4 border-b border-slate-100">
@@ -649,11 +649,10 @@ export default function TemplateEditorPage() {
                         key={c.id}
                         type="button"
                         onClick={() => toggleCategory(c.id)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 ${
-                          isSelected
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 ${isSelected
                             ? "bg-primary text-white border-primary shadow-xs"
                             : "bg-white text-slate-600 border-slate-200 hover:border-primary/40 hover:bg-slate-50"
-                        }`}
+                          }`}
                       >
                         {isSelected ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5 text-slate-400" />}
                         {c.name}
@@ -721,11 +720,10 @@ export default function TemplateEditorPage() {
                                     key={sc.id}
                                     type="button"
                                     onClick={() => toggleSubCategory(sc.id)}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all flex items-center gap-1.5 ${
-                                      isSelected
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all flex items-center gap-1.5 ${isSelected
                                         ? "bg-purple-50 text-purple-800 border-purple-300 font-semibold"
                                         : "bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-100"
-                                    }`}
+                                      }`}
                                   >
                                     {isSelected ? (
                                       <CheckSquare className="w-3.5 h-3.5 text-purple-600" />
@@ -839,8 +837,8 @@ export default function TemplateEditorPage() {
             </div>
           </div>
 
-          {/* ════ RIGHT COLUMN: Monetization, Visibility & Media Assets (5 cols) ════ */}
-          <div className="lg:col-span-5 space-y-8">
+          {/* ════ RIGHT COLUMN: Monetization, Visibility & Media Assets (4 cols on large screens) ════ */}
+          <div className="lg:col-span-5 xl:col-span-4 space-y-8">
             {/* Card 3: Monetization & Pricing Control */}
             <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-xs space-y-6">
               <div className="flex items-center justify-between pb-4 border-b border-slate-100">

@@ -105,12 +105,12 @@ const FormBuilder = ({ steps, onChange }: FormBuilderProps) => {
             className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden transition-all hover:border-primary/30"
           >
             {/* Step Header Bar */}
-            <div className="p-4 bg-slate-50/70 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+            <div className="p-4 bg-slate-50/90 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2.5 flex-1 min-w-[200px]">
                 <button
                   type="button"
                   onClick={() => toggleStepExpand(step.id)}
-                  className="p-1 rounded-lg hover:bg-slate-200/60 text-slate-500 transition-colors"
+                  className="p-1 rounded-lg hover:bg-slate-200/60 text-slate-600 transition-colors"
                 >
                   {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
@@ -121,7 +121,7 @@ const FormBuilder = ({ steps, onChange }: FormBuilderProps) => {
                   <p className="text-xs font-bold text-slate-800 truncate">
                     {step.title || `Step ${stepIndex + 1}`}
                   </p>
-                  <p className="text-[10px] text-slate-400 truncate">
+                  <p className="text-[11px] text-slate-500 truncate">
                     {step.subtitle || "No subtitle"} · {step.fields.length} slot{step.fields.length !== 1 ? "s" : ""}
                   </p>
                 </div>
@@ -133,7 +133,7 @@ const FormBuilder = ({ steps, onChange }: FormBuilderProps) => {
                   type="button"
                   disabled={stepIndex === 0}
                   onClick={() => moveStep(stepIndex, "up")}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition-colors"
                   title="Move step up"
                 >
                   <MoveUp className="w-3.5 h-3.5" />
@@ -142,7 +142,7 @@ const FormBuilder = ({ steps, onChange }: FormBuilderProps) => {
                   type="button"
                   disabled={stepIndex === steps.length - 1}
                   onClick={() => moveStep(stepIndex, "down")}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition-colors"
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition-colors"
                   title="Move step down"
                 >
                   <MoveDown className="w-3.5 h-3.5" />
@@ -165,31 +165,31 @@ const FormBuilder = ({ steps, onChange }: FormBuilderProps) => {
                 {/* Step Metadata Inputs */}
                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
                   <div className="sm:col-span-4 space-y-1">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Step Title *</label>
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-600">Step Title *</label>
                     <input
                       value={step.title}
                       onChange={(e) => updateStepTitle(stepIndex, e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary/40 transition-all placeholder:font-normal placeholder:text-slate-300"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary/60 transition-all placeholder:font-normal placeholder:text-slate-400 shadow-2xs"
                       placeholder="e.g. About You Two"
                     />
                   </div>
 
                   <div className="sm:col-span-4 space-y-1">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Step Subtitle</label>
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-600">Step Subtitle</label>
                     <input
                       value={step.subtitle || ""}
                       onChange={(e) => updateStepSubtitle(stepIndex, e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 rounded-xl text-xs font-medium text-slate-600 outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary/40 transition-all placeholder:text-slate-300"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary/60 transition-all placeholder:text-slate-400 shadow-2xs"
                       placeholder="e.g. Basic details"
                     />
                   </div>
 
                   <div className="sm:col-span-4 space-y-1">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Step Icon</label>
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-600">Step Icon</label>
                     <select
                       value={step.icon || "users"}
                       onChange={(e) => updateStepIcon(stepIndex, e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary/40 transition-all"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-medium text-slate-800 outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary/60 transition-all cursor-pointer shadow-2xs"
                     >
                       {STEP_ICONS.map((opt) => (
                         <option key={opt.value} value={opt.value}>
@@ -203,10 +203,10 @@ const FormBuilder = ({ steps, onChange }: FormBuilderProps) => {
                 {/* Slots / Fields in Step */}
                 <div className="pt-2 border-t border-slate-100">
                   <div className="mb-2.5 flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-slate-600 flex items-center gap-1.5">
+                    <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
                       <Layers className="w-3.5 h-3.5 text-primary" /> Slots & Fields in this step
                     </span>
-                    <span className="text-[10px] text-slate-400 font-medium">
+                    <span className="text-[11px] text-slate-500 font-medium">
                       {step.fields.length} defined
                     </span>
                   </div>
