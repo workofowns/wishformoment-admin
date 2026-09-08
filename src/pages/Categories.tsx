@@ -384,58 +384,58 @@ const Categories = () => {
                   placeholder="Category description (e.g. Discover personalized greetings for every special milestone)"
                   className="w-full px-4 py-2 rounded-xl bg-muted text-xs text-foreground focus:ring-2 focus:ring-primary/30 outline-none"
                 />
-                 {/* Title (Meta Title), Description & Tags */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 border-t border-border/40">
-                <input
-                  value={newCatTitle}
-                  onChange={e => setNewCatTitle(e.target.value)}
-                  placeholder="Meta Title (e.g. Birthday Wish Templates — WishForMoment)"
-                  className="w-full px-4 py-2.5 rounded-xl bg-muted text-xs font-medium focus:ring-2 focus:ring-primary/30 outline-none"
-                />
-                <input
-                  value={newCatDescription}
-                  onChange={e => setNewCatDescription(e.target.value)}
-                  placeholder="Description / Meta Description for SEO"
-                  className="w-full px-4 py-2.5 rounded-xl bg-muted text-xs font-medium focus:ring-2 focus:ring-primary/30 outline-none"
-                />
-                <input
-                  value={newCatTags}
-                  onChange={e => setNewCatTags(e.target.value)}
-                  placeholder="Tags / Keywords (comma-separated)"
-                  className="w-full px-4 py-2.5 rounded-xl bg-muted text-xs font-medium focus:ring-2 focus:ring-primary/30 outline-none"
-                />
-              </div>
+                {/* Title (Meta Title), Description & Tags */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 border-t border-border/40">
+                  <input
+                    value={newCatTitle}
+                    onChange={e => setNewCatTitle(e.target.value)}
+                    placeholder="Meta Title (e.g. Birthday Wish Templates — WishForMoment)"
+                    className="w-full px-4 py-2.5 rounded-xl bg-muted text-xs font-medium focus:ring-2 focus:ring-primary/30 outline-none"
+                  />
+                  <input
+                    value={newCatDescription}
+                    onChange={e => setNewCatDescription(e.target.value)}
+                    placeholder="Description / Meta Description for SEO"
+                    className="w-full px-4 py-2.5 rounded-xl bg-muted text-xs font-medium focus:ring-2 focus:ring-primary/30 outline-none"
+                  />
+                  <input
+                    value={newCatTags}
+                    onChange={e => setNewCatTags(e.target.value)}
+                    placeholder="Tags / Keywords (comma-separated)"
+                    className="w-full px-4 py-2.5 rounded-xl bg-muted text-xs font-medium focus:ring-2 focus:ring-primary/30 outline-none"
+                  />
+                </div>
 
-              {/* Ranking & Promotion */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-border/40">
-                <div className="flex items-center gap-2 bg-muted px-3 py-1.5 rounded-xl">
-                  <Sparkles className="w-4 h-4 text-purple-600 shrink-0" />
-                  <input
-                    type="number"
-                    min="1"
-                    value={newCatFeaturedPosition}
-                    onChange={e => setNewCatFeaturedPosition(e.target.value === "" ? "" : Number(e.target.value))}
-                    placeholder="Fixed Pin Position (e.g. 1)"
-                    className="w-full bg-transparent text-xs font-semibold outline-none placeholder:text-muted-foreground"
-                  />
-                </div>
-                <div className="flex items-center gap-2 bg-muted px-3 py-1.5 rounded-xl">
-                  <Zap className="w-4 h-4 text-indigo-600 shrink-0" />
-                  <input
-                    type="number"
-                    min="0"
-                    step="10"
-                    value={newCatAdminBoost || ""}
-                    onChange={e => setNewCatAdminBoost(Number(e.target.value))}
-                    placeholder="Admin Boost Score (e.g. 50)"
-                    className="w-full bg-transparent text-xs font-semibold outline-none placeholder:text-muted-foreground"
-                  />
+                {/* Ranking & Promotion */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-border/40">
+                  <div className="flex items-center gap-2 bg-muted px-3 py-1.5 rounded-xl">
+                    <Sparkles className="w-4 h-4 text-purple-600 shrink-0" />
+                    <input
+                      type="number"
+                      min="1"
+                      value={newCatFeaturedPosition}
+                      onChange={e => setNewCatFeaturedPosition(e.target.value === "" ? "" : Number(e.target.value))}
+                      placeholder="Fixed Pin Position (e.g. 1)"
+                      className="w-full bg-transparent text-xs font-semibold outline-none placeholder:text-muted-foreground"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 bg-muted px-3 py-1.5 rounded-xl">
+                    <Zap className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <input
+                      type="number"
+                      min="0"
+                      step="10"
+                      value={newCatAdminBoost || ""}
+                      onChange={e => setNewCatAdminBoost(Number(e.target.value))}
+                      placeholder="Admin Boost Score (e.g. 50)"
+                      className="w-full bg-transparent text-xs font-semibold outline-none placeholder:text-muted-foreground"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Category List */}
         <div className="space-y-4">
