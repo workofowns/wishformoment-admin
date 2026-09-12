@@ -65,6 +65,11 @@ export default function TemplateEditorPage() {
     queryFn: () => fetchApi("/currency-rates"),
   });
 
+  const { data: musicData } = useQuery<{ success: boolean; music: Array<{ id: number; name: string; music_url: string }> }>({
+    queryKey: ["adminMusicList"],
+    queryFn: () => fetchApi("/music"),
+  });
+
   const categories: Category[] = categoryData?.data || [];
   const subCategories: SubCategory[] = subCategoriesData?.data || [];
   const currencyRates: CurrencyRate[] = ratesData?.rates || [];
@@ -446,6 +451,19 @@ export default function TemplateEditorPage() {
               } catch (err) {
                 console.error("Failed to upload field default asset", err);
                 return field;
+              }
+            }
+            if (field.type === "music" && field.defaultValue && !field.defaultValue.startsWith("http")) {
+              const cleanVal = field.defaultValue.trim().toLowerCase();
+              const matchedMusic = (musicData?.music || []).find(
+                (m) =>
+                  m.name.trim().toLowerCase() === cleanVal ||
+                  String(m.id) === cleanVal ||
+                  m.name.trim().toLowerCase().replace(/[-_]/g, ' ') === cleanVal.replace(/[-_]/g, ' ') ||
+                  (m.music_url && m.music_url.toLowerCase().includes(cleanVal))
+              );
+              if (matchedMusic && matchedMusic.music_url) {
+                return { ...field, defaultValue: matchedMusic.music_url };
               }
             }
             return field;

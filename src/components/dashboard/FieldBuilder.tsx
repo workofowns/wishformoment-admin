@@ -404,8 +404,12 @@ const FieldBuilder = ({ fields, onChange }: FieldBuilderProps) => {
                               <MusicIcon className="w-5 h-5 text-indigo-600" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-bold text-slate-800 truncate">
-                                {field.defaultValue || "No default selected"}
+                              <p className="text-xs font-bold text-slate-800 truncate" title={field.defaultValue}>
+                                {field.defaultValue
+                                  ? (field.defaultValue.startsWith("http://") || field.defaultValue.startsWith("https://")
+                                      ? decodeURIComponent(field.defaultValue.split("/").pop()?.split("?")[0] || field.defaultValue)
+                                      : field.defaultValue)
+                                  : "No default selected"}
                               </p>
                             </div>
                             <div className="flex gap-2">
@@ -479,7 +483,7 @@ const FieldBuilder = ({ fields, onChange }: FieldBuilderProps) => {
                         isOpen={musicSelectorOpen === i}
                         onClose={() => setMusicSelectorOpen(null)}
                         onSelect={(m) => {
-                          updateField(i, { defaultValue: m.name }); // Store name or ID/URL as default
+                          updateField(i, { defaultValue: m.music_url }); // Store song URL as default
                           setMusicSelectorOpen(null);
                         }}
                       />
