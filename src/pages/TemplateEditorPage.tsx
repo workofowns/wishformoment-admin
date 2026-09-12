@@ -438,43 +438,104 @@ export default function TemplateEditorPage() {
       setIsUploading(false);
     }
 
-    // Upload default image assets inside fields if present
-    const processedFields = await Promise.all(
-      steps.map(async (step) => {
-        const processedStepFields = await Promise.all(
-          step.fields.map(async (field: any) => {
-            if (field.type === "image" && field.pendingFile) {
-              try {
-                const uploadedUrl = await uploadMedia(field.pendingFile, MEDIA_FOLDERS.TEMPLATES);
-                const { pendingFile, previewUrl, ...rest } = field;
-                return { ...rest, default_value: uploadedUrl };
-              } catch (err) {
-                console.error("Failed to upload field default asset", err);
-                return field;
+    // Upload default image assets inside fields if present (support both single and multiple image fields)
+    setIsUploading(true);
+    let processedFields;
+    try {
+      processedFields = await Promise.all(
+        steps.map(async (step) => {
+          const processedStepFields = await Promise.all(
+            step.fields.map(async (field: any) => {
+              if (field.type === "image") {
+                const pendingFiles: File[] =
+                  field._files && Array.isArray(field._files)
+                    ? field._files
+                    : field.pendingFile
+                    ? [field.pendingFile]
+                    : [];
+
+                const folder = (field.s3Folder || MEDIA_FOLDERS.TEMPLATES) as any;
+
+                let uploadedUrls: string[] = [];
+                if (pendingFiles.length > 0) {
+                  uploadedUrls = await Promise.all(
+                    pendingFiles.map((file) => uploadMedia(file, folder))
+                  );
+                }
+
+                let finalDefaultValue = field.defaultValue || "";
+                if (field.multiple) {
+                  let existingUrls: string[] = [];
+                  try {
+                    existingUrls = field.defaultValue?.startsWith("[")
+                      ? JSON.parse(field.defaultValue)
+                      : field.defaultValue
+                      ? [field.defaultValue]
+                      : [];
+                  } catch {
+                    existingUrls = [];
+                  }
+
+                  let uploadIdx = 0;
+                  const resolvedList = existingUrls
+                    .map((url: string) => {
+                      if (typeof url === "string" && url.startsWith("blob:")) {
+                        const replacement = uploadedUrls[uploadIdx++];
+                        return replacement || null;
+                      }
+                      return url;
+                    })
+                    .filter(Boolean) as string[];
+
+                  while (uploadIdx < uploadedUrls.length) {
+                    resolvedList.push(uploadedUrls[uploadIdx++]);
+                  }
+
+                  finalDefaultValue = resolvedList.length > 0 ? JSON.stringify(resolvedList) : "";
+                } else {
+                  if (uploadedUrls.length > 0) {
+                    finalDefaultValue = uploadedUrls[0];
+                  } else if (typeof finalDefaultValue === "string" && finalDefaultValue.startsWith("blob:")) {
+                    finalDefaultValue = "";
+                  }
+                }
+
+                const { _files, pendingFile, previewUrl, default_value, ...rest } = field;
+                return {
+                  ...rest,
+                  defaultValue: finalDefaultValue,
+                };
               }
-            }
-            if (field.type === "music" && field.defaultValue && !field.defaultValue.startsWith("http")) {
-              const cleanVal = field.defaultValue.trim().toLowerCase();
-              const matchedMusic = (musicData?.music || []).find(
-                (m) =>
-                  m.name.trim().toLowerCase() === cleanVal ||
-                  String(m.id) === cleanVal ||
-                  m.name.trim().toLowerCase().replace(/[-_]/g, ' ') === cleanVal.replace(/[-_]/g, ' ') ||
-                  (m.music_url && m.music_url.toLowerCase().includes(cleanVal))
-              );
-              if (matchedMusic && matchedMusic.music_url) {
-                return { ...field, defaultValue: matchedMusic.music_url };
+
+              if (field.type === "music" && field.defaultValue && !field.defaultValue.startsWith("http")) {
+                const cleanVal = field.defaultValue.trim().toLowerCase();
+                const matchedMusic = (musicData?.music || []).find(
+                  (m) =>
+                    m.name.trim().toLowerCase() === cleanVal ||
+                    String(m.id) === cleanVal ||
+                    m.name.trim().toLowerCase().replace(/[-_]/g, ' ') === cleanVal.replace(/[-_]/g, ' ') ||
+                    (m.music_url && m.music_url.toLowerCase().includes(cleanVal))
+                );
+                if (matchedMusic && matchedMusic.music_url) {
+                  return { ...field, defaultValue: matchedMusic.music_url };
+                }
               }
-            }
-            return field;
-          })
-        );
-        return {
-          ...step,
-          fields: processedStepFields,
-        };
-      })
-    );
+              return field;
+            })
+          );
+          return {
+            ...step,
+            fields: processedStepFields,
+          };
+        })
+      );
+      setSteps(processedFields);
+    } catch (err: any) {
+      toast.error(err?.message || "Field default image upload failed");
+      setIsUploading(false);
+      return;
+    }
+    setIsUploading(false);
 
     const payload = {
       name: slug,
