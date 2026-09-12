@@ -40,11 +40,53 @@ interface FieldBuilderProps {
 const fieldTypes = ["text", "textarea", "date", "select", "image", "music"] as const;
 
 const FieldBuilder = ({ fields, onChange }: FieldBuilderProps) => {
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  const moveField = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex || toIndex < 0 || toIndex >= fields.length) return;
+    const newFields = [...fields];
+    const [moved] = newFields.splice(fromIndex, 1);
+    newFields.splice(toIndex, 0, moved);
+    onChange(newFields);
+  };
+
+  const handleDragStart = (index: number, e: React.DragEvent) => {
+    e.dataTransfer.setData("text/plain", String(index));
+    e.dataTransfer.effectAllowed = "move";
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (index: number, e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dragOverIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDrop = (targetIndex: number, e: React.DragEvent) => {
+    e.preventDefault();
+    const sourceStr = e.dataTransfer.getData("text/plain");
+    const sourceIndex = sourceStr !== "" ? parseInt(sourceStr, 10) : draggedIndex;
+    if (sourceIndex !== null && sourceIndex !== undefined && !isNaN(sourceIndex) && sourceIndex !== targetIndex) {
+      moveField(sourceIndex, targetIndex);
+    }
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
   const [addingOption, setAddingOption] = useState<number | null>(null);
   const [newOption, setNewOption] = useState("");
   const [mediaSelectorOpen, setMediaSelectorOpen] = useState<number | null>(null);
   const [musicSelectorOpen, setMusicSelectorOpen] = useState<number | null>(null);
   const [localFolders, setLocalFolders] = useState<string[]>([]);
+
 
   const { data: dynamicFolders } = useQuery<string[]>({
     queryKey: ["adminMediaFolders"],
@@ -118,11 +160,30 @@ const FieldBuilder = ({ fields, onChange }: FieldBuilderProps) => {
               initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.98 }}
-              className="bg-white rounded-xl p-3 sm:p-3.5 border border-slate-200 shadow-2xs group hover:border-primary/30 transition-all"
+              onDragOver={(e) => handleDragOver(i, e)}
+              onDrop={(e) => handleDrop(i, e)}
+              className={`bg-white rounded-xl p-3 sm:p-3.5 border transition-all ${
+                draggedIndex === i
+                  ? "opacity-30 border-dashed border-primary scale-[0.99]"
+                  : dragOverIndex === i
+                  ? "border-primary ring-2 ring-primary/25 shadow-md bg-primary/[0.02]"
+                  : "border-slate-200 shadow-2xs group hover:border-primary/30"
+              }`}
             >
               <div className="flex items-start gap-2.5">
-                <div className="pt-2 shrink-0">
-                  <GripVertical className="w-3.5 h-3.5 text-slate-400 cursor-grab active:cursor-grabbing opacity-40 group-hover:opacity-100 transition-opacity" />
+                <div className="pt-2 shrink-0 flex items-center gap-1.5">
+                  <div
+                    draggable
+                    onDragStart={(e) => handleDragStart(i, e)}
+                    onDragEnd={handleDragEnd}
+                    className="p-1 -m-1 rounded-md cursor-grab active:cursor-grabbing hover:bg-slate-100 transition-colors"
+                    title="Drag to reorder slot position"
+                  >
+                    <GripVertical className="w-3.5 h-3.5 text-slate-400 group-hover:text-primary transition-colors" />
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-400 select-none w-4 text-center">
+                    {i + 1}
+                  </span>
                 </div>
 
                 <div className="flex-1 min-w-0 space-y-2">
