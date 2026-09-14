@@ -53,21 +53,29 @@ export default function TemplateEditorPage() {
   const { data: categoryData } = useQuery({
     queryKey: ["categories"],
     queryFn: () => fetchApi("/categories"),
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const { data: subCategoriesData } = useQuery({
     queryKey: ["sub-categories"],
     queryFn: () => fetchApi("/sub-categories"),
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const { data: ratesData } = useQuery({
     queryKey: ["adminCurrencyRates"],
     queryFn: () => fetchApi("/currency-rates"),
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const { data: musicData } = useQuery<{ success: boolean; music: Array<{ id: number; name: string; music_url: string }> }>({
     queryKey: ["adminMusicList"],
     queryFn: () => fetchApi("/music"),
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const categories: Category[] = categoryData?.data || [];
@@ -120,6 +128,8 @@ export default function TemplateEditorPage() {
     queryKey: ["adminTemplate", id],
     queryFn: () => fetchApi(`/templates/${id}`),
     enabled: isEditing,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   useEffect(() => {
@@ -451,8 +461,8 @@ export default function TemplateEditorPage() {
                   field._files && Array.isArray(field._files)
                     ? field._files
                     : field.pendingFile
-                    ? [field.pendingFile]
-                    : [];
+                      ? [field.pendingFile]
+                      : [];
 
                 const folder = (field.s3Folder || MEDIA_FOLDERS.TEMPLATES) as any;
 
@@ -470,8 +480,8 @@ export default function TemplateEditorPage() {
                     existingUrls = field.defaultValue?.startsWith("[")
                       ? JSON.parse(field.defaultValue)
                       : field.defaultValue
-                      ? [field.defaultValue]
-                      : [];
+                        ? [field.defaultValue]
+                        : [];
                   } catch {
                     existingUrls = [];
                   }
@@ -729,8 +739,8 @@ export default function TemplateEditorPage() {
                         type="button"
                         onClick={() => toggleCategory(c.id)}
                         className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 ${isSelected
-                            ? "bg-primary text-white border-primary shadow-xs"
-                            : "bg-white text-slate-600 border-slate-200 hover:border-primary/40 hover:bg-slate-50"
+                          ? "bg-primary text-white border-primary shadow-xs"
+                          : "bg-white text-slate-600 border-slate-200 hover:border-primary/40 hover:bg-slate-50"
                           }`}
                       >
                         {isSelected ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5 text-slate-400" />}
@@ -800,8 +810,8 @@ export default function TemplateEditorPage() {
                                     type="button"
                                     onClick={() => toggleSubCategory(sc.id)}
                                     className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all flex items-center gap-1.5 ${isSelected
-                                        ? "bg-purple-50 text-purple-800 border-purple-300 font-semibold"
-                                        : "bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-100"
+                                      ? "bg-purple-50 text-purple-800 border-purple-300 font-semibold"
+                                      : "bg-slate-50 text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-100"
                                       }`}
                                   >
                                     {isSelected ? (

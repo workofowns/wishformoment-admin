@@ -25,7 +25,13 @@ import PaymentHistory from "./pages/PaymentHistory";
 import CacheManagement from "./pages/CacheManagement";
 import './App.scss';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const RequireAuth = ({ children }: { children: JSX.Element }) => {
   const token = localStorage.getItem("adminToken");
