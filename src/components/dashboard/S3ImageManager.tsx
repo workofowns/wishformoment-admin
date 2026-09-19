@@ -368,8 +368,23 @@ const S3ImageManager = () => {
                       type="file" 
                       ref={fileInputRef}
                       className="hidden" 
-                      accept="image/*"
-                      onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                      accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,.jpg,.jpeg,.png,.webp,.gif,.svg"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) {
+                          setUploadFile(null);
+                          return;
+                        }
+                        const ext = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+                        const allowedExts = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg'];
+                        const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
+                        if (!allowedExts.includes(ext) && !allowedMimes.includes(file.type.toLowerCase())) {
+                          toast.error("Please upload an image in JPG, PNG, WEBP, GIF, or SVG format.");
+                          if (fileInputRef.current) fileInputRef.current.value = "";
+                          return;
+                        }
+                        setUploadFile(file);
+                      }}
                     />
                     {uploadFile ? (
                       <div className="flex flex-col items-center gap-3">

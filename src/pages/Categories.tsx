@@ -142,6 +142,15 @@ const Categories = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
+    const allowedExts = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg"];
+    const allowedMimes = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml"];
+    if (!allowedExts.includes(ext) && !allowedMimes.includes(file.type.toLowerCase())) {
+      toast.error("Please upload a JPG, PNG, WEBP, GIF, or SVG image.");
+      e.target.value = "";
+      return;
+    }
+
     // Route to the correct S3 folder based on what's being uploaded
     const folder = type === 'newSub' || type === 'editSub'
       ? MEDIA_FOLDERS.SUB_CATEGORIES
@@ -356,7 +365,7 @@ const Categories = () => {
                       ) : (
                         <Upload className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                       )}
-                      <input type="file" onChange={(e) => handleFileChange(e, 'newCat')} className="absolute inset-0 opacity-0 cursor-pointer" />
+                      <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,.jpg,.jpeg,.png,.webp,.gif,.svg" onChange={(e) => handleFileChange(e, 'newCat')} className="absolute inset-0 opacity-0 cursor-pointer" />
                     </div>
 
                     {/* Modern Gradient/Color Picker */}
@@ -464,7 +473,7 @@ const Categories = () => {
                           ) : (
                             <Upload className="w-4 h-4 text-muted-foreground" />
                           )}
-                          <input type="file" onChange={(e) => handleFileChange(e, 'editCat')} className="absolute inset-0 opacity-0 cursor-pointer" />
+                          <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,.jpg,.jpeg,.png,.webp,.gif,.svg" onChange={(e) => handleFileChange(e, 'editCat')} className="absolute inset-0 opacity-0 cursor-pointer" />
                         </div>
                         <div className="relative w-11 h-11">
                           <GradientColorPicker
@@ -642,7 +651,7 @@ const Categories = () => {
                                     ) : (
                                       <Upload className="w-3 h-3 text-muted-foreground" />
                                     )}
-                                    <input type="file" onChange={(e) => handleFileChange(e, 'editSub')} className="absolute inset-0 opacity-0 cursor-pointer" />
+                                    <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,.jpg,.jpeg,.png,.webp,.gif,.svg" onChange={(e) => handleFileChange(e, 'editSub')} className="absolute inset-0 opacity-0 cursor-pointer" />
                                   </div>
                                   <div className="relative w-10 h-10">
                                     <GradientColorPicker
@@ -791,7 +800,7 @@ const Categories = () => {
                                   ) : (
                                     <Upload className="w-3.5 h-3.5 text-muted-foreground" />
                                   )}
-                                  <input type="file" onChange={(e) => handleFileChange(e, 'newSub')} className="absolute inset-0 opacity-0 cursor-pointer" />
+                                  <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,.jpg,.jpeg,.png,.webp,.gif,.svg" onChange={(e) => handleFileChange(e, 'newSub')} className="absolute inset-0 opacity-0 cursor-pointer" />
                                 </div>
                                 <div className="relative w-10 h-10">
                                   <GradientColorPicker

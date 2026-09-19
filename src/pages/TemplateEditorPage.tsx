@@ -245,6 +245,16 @@ export default function TemplateEditorPage() {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
+    const allowedExts = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
+    const allowedMimes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    if (!allowedExts.includes(ext) && !allowedMimes.includes(file.type.toLowerCase())) {
+      toast.error("Please upload a JPG, PNG, WEBP, or GIF image.");
+      e.target.value = "";
+      return;
+    }
+
     if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
     const preview = URL.createObjectURL(file);
     setPendingThumbnailFile(file);
@@ -255,8 +265,24 @@ export default function TemplateEditorPage() {
 
   // Handle Preview Images
   const handlePreviewImagesSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
+    const rawFiles = Array.from(e.target.files || []);
+    if (rawFiles.length === 0) return;
+
+    const allowedExts = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
+    const allowedMimes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    const isAllowed = (file: File) => {
+      const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
+      return allowedExts.includes(ext) || allowedMimes.includes(file.type.toLowerCase());
+    };
+
+    const files = rawFiles.filter(isAllowed);
+    if (rawFiles.some((f) => !isAllowed(f))) {
+      toast.error("Only JPG, PNG, WEBP, and GIF images are supported. Unsupported files were skipped.");
+    }
+    if (files.length === 0) {
+      e.target.value = "";
+      return;
+    }
 
     const newUrls = files.map((file) => URL.createObjectURL(file));
     setPendingPreviewFiles((prev) => [...prev, ...files]);
@@ -1153,7 +1179,7 @@ export default function TemplateEditorPage() {
                   type="file"
                   ref={fileInputRef}
                   onChange={handleFileSelect}
-                  accept="image/png, image/jpeg, image/webp"
+                  accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
                   className="hidden"
                 />
               </div>
@@ -1207,7 +1233,7 @@ export default function TemplateEditorPage() {
                       type="file"
                       multiple
                       onChange={handlePreviewImagesSelect}
-                      accept="image/png, image/jpeg, image/webp"
+                      accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
                       className="hidden"
                     />
                   </label>
