@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index";
 import Categories from "./pages/Categories";
+import CategoryDetailPage from "./pages/CategoryDetailPage";
 import Templates from "./pages/Templates";
 import TemplateEditorPage from "./pages/TemplateEditorPage";
 import TrendingTemplates from "./pages/TrendingTemplates";
@@ -53,6 +54,9 @@ const App = () => (
           <Route path="/analytics" element={<RequireAuth><Analytics /></RequireAuth>} />
           <Route path="/rankings" element={<RequireAuth><RankingsPage /></RequireAuth>} />
           <Route path="/categories" element={<RequireAuth><Categories /></RequireAuth>} />
+          <Route path="/categories/new" element={<RequireAuth><CategoryDetailPage /></RequireAuth>} />
+          <Route path="/categories/:id" element={<RequireAuth><CategoryDetailPage /></RequireAuth>} />
+          <Route path="/categories/:id/edit" element={<RequireAuth><CategoryDetailPage /></RequireAuth>} />
           <Route path="/templates" element={<RequireAuth><Templates /></RequireAuth>} />
           <Route path="/templates/new" element={<RequireAuth><TemplateEditorPage /></RequireAuth>} />
           <Route path="/templates/edit/:id" element={<RequireAuth><TemplateEditorPage /></RequireAuth>} />

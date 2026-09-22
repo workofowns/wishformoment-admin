@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import {
-  Plus, Search, Crown, Edit2, Trash2, Layout, Box, Sparkles, Zap
+  Plus, Search, Crown, Edit2, Trash2, Layout, Box, Sparkles, Zap, Globe
 } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
@@ -35,6 +35,12 @@ interface Template {
   prices?: Record<string, number>;
   featured_position?: number | null;
   admin_boost?: number;
+  meta_title?: string | null;
+  meta_description?: string | null;
+  og_image?: string | null;
+  meta_keywords?: string[];
+  canonical_url?: string | null;
+  noindex?: boolean;
 }
 
 interface TemplatesResponse {
@@ -196,6 +202,15 @@ const Templates = () => {
                         ? `${template.sub_categories[0].name} +${template.sub_categories.length - 1}`
                         : template.sub_category_name || "Misc"}
                     </div>
+                    {template.meta_title ? (
+                      <div className="bg-emerald-600 text-white px-2 py-0.5 rounded-md text-[8px] font-black uppercase flex items-center w-fit shadow-xs">
+                        <Globe className="w-2.5 h-2.5 mr-1" /> SEO Ready
+                      </div>
+                    ) : (
+                      <div className="bg-slate-900/60 text-slate-300 backdrop-blur-xs px-2 py-0.5 rounded-md text-[8px] font-medium flex items-center w-fit">
+                        <Globe className="w-2.5 h-2.5 mr-1 opacity-70" /> Default SEO
+                      </div>
+                    )}
                   </div>
                 </div>
 

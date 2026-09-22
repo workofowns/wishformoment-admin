@@ -58,6 +58,27 @@ export const fetchApi = async (endpoint: string, options: RequestInit = {}) => {
   }
 };
 
+export const resolveMimeType = (file: File): string => {
+  if (file.type && file.type.trim() && file.type !== "application/octet-stream") {
+    return file.type;
+  }
+  const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
+  const mimeMap: Record<string, string> = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
+    ".svg": "image/svg+xml",
+    ".mp3": "audio/mpeg",
+    ".wav": "audio/wav",
+    ".ogg": "audio/ogg",
+    ".mp4": "video/mp4",
+    ".webm": "video/webm",
+  };
+  return mimeMap[ext] || file.type || "image/png";
+};
+
 // ── Media Upload utility (S3 + CloudFront) ───────────────────────────────────
 /**
  * Uploads a file to S3 via the presign flow:
@@ -71,6 +92,7 @@ export const fetchApi = async (endpoint: string, options: RequestInit = {}) => {
  */
 export const uploadMedia = async (file: File, folder: MediaFolder): Promise<string> => {
   const token = localStorage.getItem("adminToken");
+  const contentType = resolveMimeType(file);
 
   // ── Step 1: Ask backend for a presigned S3 PUT URL ──────────────────────────
   const presignRes = await fetch(`${MEDIA_BASE_URL}/media/presign`, {
@@ -82,7 +104,7 @@ export const uploadMedia = async (file: File, folder: MediaFolder): Promise<stri
     body: JSON.stringify({
       folder,
       filename: file.name,
-      contentType: file.type,
+      contentType,
     }),
   });
 
@@ -96,7 +118,7 @@ export const uploadMedia = async (file: File, folder: MediaFolder): Promise<stri
   // ── Step 2: PUT file bytes directly to S3 (no server in the middle) ─────────
   const s3Res = await fetch(uploadUrl, {
     method: "PUT",
-    headers: { "Content-Type": file.type },
+    headers: { "Content-Type": contentType },
     body: file,
   });
 

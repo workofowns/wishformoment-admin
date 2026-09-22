@@ -5,9 +5,10 @@ import { fetchApi, uploadMedia, MEDIA_FOLDERS } from "@/lib/api";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import FormBuilder, { FormStep } from "@/components/dashboard/FormBuilder";
 import {
-  ArrowLeft, Check, Crown, Globe, Layout, Layers, Plus, RefreshCw,
+  ArrowLeft, Check, Crown, Globe, Image, Layout, Layers, Plus, RefreshCw,
   Sparkles, Tag, Trash2, Upload, X, Zap, Code, ShieldCheck, Eye, EyeOff,
-  Folder, FolderCheck, CheckSquare, Square
+  Folder, FolderCheck, CheckSquare, Square, Search, Share2, ExternalLink,
+  Link as LinkIcon, HelpCircle, Copy, SlidersHorizontal, Music, FileAudio, AlertCircle
 } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
@@ -123,6 +124,130 @@ export default function TemplateEditorPage() {
 
   const [isUploading, setIsUploading] = useState(false);
 
+  // SEO Metadata & Social Sharing State
+  const [metaTitle, setMetaTitle] = useState("");
+  const [metaDescription, setMetaDescription] = useState("");
+  const [ogImage, setOgImage] = useState("");
+  const [pendingOgImageFile, setPendingOgImageFile] = useState<File | null>(null);
+  const [localOgImagePreview, setLocalOgImagePreview] = useState("");
+  const [metaKeywords, setMetaKeywords] = useState<string[]>([]);
+  const [metaKeywordInput, setMetaKeywordInput] = useState("");
+  const [canonicalUrl, setCanonicalUrl] = useState("");
+  const [noindex, setNoindex] = useState(false);
+  const [seoPreviewTab, setSeoPreviewTab] = useState<"google" | "social">("google");
+
+  const ogFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Dynamic Template Assets State (Stored dynamically in template_assets JSONB column in database)
+  interface DynamicTemplateAsset {
+    id: string;
+    key: string;
+    url: string;
+    pendingFile?: File | null;
+    localPreview?: string;
+  }
+
+  const [dynamicAssets, setDynamicAssets] = useState<DynamicTemplateAsset[]>([]);
+  const [copiedAssetKey, setCopiedAssetKey] = useState<string | null>(null);
+  const [uploadingAssetId, setUploadingAssetId] = useState<string | null>(null);
+  const assetFileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const isValidWebUrl = (url?: string | null): boolean => {
+    if (!url) return false;
+    const trimmed = url.trim();
+    return (
+      trimmed.startsWith("http://") ||
+      trimmed.startsWith("https://") ||
+      trimmed.startsWith("blob:") ||
+      trimmed.startsWith("data:")
+    );
+  };
+
+  const handleAddAsset = (presetKey: string = "") => {
+    const newId = `asset_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    setDynamicAssets((prev) => [
+      ...prev,
+      {
+        id: newId,
+        key: presetKey,
+        url: "",
+      },
+    ]);
+  };
+
+  const handleRemoveAsset = (id: string) => {
+    setDynamicAssets((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  const handleUpdateAssetKey = (id: string, newKey: string) => {
+    // Sanitize: lowercase, replace spaces with underscores, allow alphanumeric, underscore, hyphen
+    const formatted = newKey.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_-]/g, "");
+    setDynamicAssets((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, key: formatted } : a))
+    );
+  };
+
+  const handleUpdateAssetUrl = (id: string, newUrl: string) => {
+    setDynamicAssets((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, url: newUrl, pendingFile: null, localPreview: undefined } : a))
+    );
+  };
+
+  const handleAssetFileSelect = async (id: string, file: File) => {
+    if (file.size > 25 * 1024 * 1024) {
+      toast.error("Asset file size must be under 25MB");
+      return;
+    }
+
+    const blobUrl = URL.createObjectURL(file);
+    const suggestedKey = file.name.split(".")[0].toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_-]/g, "");
+
+    // Set preview immediately
+    setDynamicAssets((prev) =>
+      prev.map((a) => {
+        if (a.id !== id) return a;
+        return {
+          ...a,
+          pendingFile: file,
+          localPreview: blobUrl,
+          key: a.key || suggestedKey,
+        };
+      })
+    );
+
+    // Upload directly to S3
+    setUploadingAssetId(id);
+    const toastId = toast.loading(`Uploading "${file.name}" to S3 bucket...`);
+    try {
+      const cdnUrl = await uploadMedia(file, MEDIA_FOLDERS.TEMPLATES);
+      setDynamicAssets((prev) =>
+        prev.map((a) => {
+          if (a.id !== id) return a;
+          return {
+            ...a,
+            url: cdnUrl,
+            pendingFile: null,
+            localPreview: undefined,
+          };
+        })
+      );
+      toast.success(`Uploaded "${file.name}" to S3 successfully!`, { id: toastId });
+    } catch (err: any) {
+      console.error("[TemplateEditor] Asset S3 upload failed:", err);
+      toast.error(err?.message || "Failed to upload asset to S3 bucket", { id: toastId });
+    } finally {
+      setUploadingAssetId(null);
+    }
+  };
+
+  const handleCopyKeyCode = (key: string) => {
+    if (!key) return;
+    navigator.clipboard.writeText(`templateAssets.${key}`);
+    setCopiedAssetKey(key);
+    toast.success(`Copied "templateAssets.${key}"`);
+    setTimeout(() => setCopiedAssetKey(null), 2000);
+  };
+
   // Fetch Existing Template when Editing
   const { data: templateData, isLoading: isLoadingTemplate } = useQuery({
     queryKey: ["adminTemplate", id],
@@ -146,6 +271,21 @@ export default function TemplateEditorPage() {
       setFeaturedPosition(templateData.featured_position ?? "");
       setAdminBoost(templateData.admin_boost ?? 0);
 
+      // SEO Metadata hydration (supports both snake_case and camelCase from backend)
+      setMetaTitle(templateData.meta_title ?? templateData.metaTitle ?? "");
+      setMetaDescription(templateData.meta_description ?? templateData.metaDescription ?? "");
+      setOgImage(templateData.og_image ?? templateData.ogImage ?? "");
+      const rawKeywords = templateData.meta_keywords ?? templateData.metaKeywords;
+      setMetaKeywords(
+        Array.isArray(rawKeywords)
+          ? rawKeywords
+          : typeof rawKeywords === "string"
+          ? rawKeywords.split(",").map((k: string) => k.trim()).filter(Boolean)
+          : []
+      );
+      setCanonicalUrl(templateData.canonical_url ?? templateData.canonicalUrl ?? "");
+      setNoindex(templateData.noindex ?? templateData.is_noindex ?? false);
+
       // Multi-category & Multi-subcategory hydration
       const catIds: string[] =
         templateData.category_ids && templateData.category_ids.length > 0
@@ -166,6 +306,21 @@ export default function TemplateEditorPage() {
       setPreviewImages(templateData.preview_images || []);
       setPreviewVideoUrl(templateData.preview_video_url || "");
 
+      // Template Assets hydration (Dynamic key-value map from DB)
+      const rawAssets = templateData.template_assets ?? templateData.templateAssets;
+      if (rawAssets && typeof rawAssets === "object" && !Array.isArray(rawAssets)) {
+        const loadedAssets: DynamicTemplateAsset[] = Object.entries(rawAssets).map(
+          ([key, value], index) => ({
+            id: `asset_${Date.now()}_${index}_${Math.random().toString(36).slice(2, 6)}`,
+            key,
+            url: typeof value === "string" ? value : (value as any)?.url || "",
+          })
+        );
+        setDynamicAssets(loadedAssets);
+      } else {
+        setDynamicAssets([]);
+      }
+
       if (templateData.form_fields && Array.isArray(templateData.form_fields)) {
         const isStepStructure = templateData.form_fields.length > 0 && "fields" in templateData.form_fields[0];
         if (isStepStructure) {
@@ -184,6 +339,141 @@ export default function TemplateEditorPage() {
       }
     }
   }, [templateData, isEditing]);
+
+  // SEO Helpers
+  const autoGenerateMetaTitle = () => {
+    const primaryCat = categories.find((c) => selectedCategoryIds.includes(c.id));
+    const primarySub = subCategories.find((s) => selectedSubCategoryIds.includes(s.id));
+    const label = templateName.trim() || name.trim() || "Greeting Template";
+    const subLabel = primarySub ? primarySub.name : primaryCat ? primaryCat.name : "";
+    const generated = subLabel ? `${label} — ${subLabel} | WishForMoment` : `${label} | WishForMoment`;
+    setMetaTitle(generated.slice(0, 60));
+    toast.success("Meta title auto-generated!");
+  };
+
+  const autoGenerateMetaDescription = () => {
+    const label = templateName.trim() || name.trim() || "this template";
+    const primarySub = subCategories.find((s) => selectedSubCategoryIds.includes(s.id));
+    const subLabel = primarySub ? primarySub.name.toLowerCase() : "special";
+    let desc = description.trim();
+    if (!desc || desc.length < 20) {
+      desc = `Create and send a personalized ${subLabel} wish with this "${label}" template. Customize messages, photos, and music instantly on WishForMoment.`;
+    }
+    setMetaDescription(desc.slice(0, 160));
+    toast.success("Meta description auto-generated!");
+  };
+
+  const handleAddKeyword = () => {
+    const trimmed = metaKeywordInput.trim().replace(/^,+|,+$/g, "");
+    if (!trimmed) return;
+    const parts = trimmed.split(",").map((p) => p.trim()).filter(Boolean);
+    const updated = Array.from(new Set([...metaKeywords, ...parts]));
+    setMetaKeywords(updated);
+    setMetaKeywordInput("");
+  };
+
+  const handleRemoveKeyword = (kwToRemove: string) => {
+    setMetaKeywords((prev) => prev.filter((k) => k !== kwToRemove));
+  };
+
+  const handleCopyThumbnailToOg = () => {
+    if (thumbnailUrl) {
+      setOgImage(thumbnailUrl);
+      setPendingOgImageFile(null);
+      if (localOgImagePreview) URL.revokeObjectURL(localOgImagePreview);
+      setLocalOgImagePreview("");
+      toast.success("Cover thumbnail copied to Social Sharing OG Image!");
+    } else if (pendingThumbnailFile) {
+      setPendingOgImageFile(pendingThumbnailFile);
+      if (localPreviewUrl) setLocalOgImagePreview(localPreviewUrl);
+      toast.success("Pending cover image linked to Social Sharing OG Image!");
+    } else {
+      toast.error("Please select or upload a cover thumbnail first");
+    }
+  };
+
+  const handleOgFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Image file must be under 5MB");
+        return;
+      }
+      setPendingOgImageFile(file);
+      const url = URL.createObjectURL(file);
+      setLocalOgImagePreview(url);
+    }
+  };
+
+  const [isSavingSeo, setIsSavingSeo] = useState(false);
+
+  const handleSaveSeoOnly = async () => {
+    if (!isEditing || !id) {
+      toast.info("Please create and save the template first before updating SEO metadata independently.");
+      return;
+    }
+
+    setIsSavingSeo(true);
+    try {
+      let finalOgImage = ogImage.trim();
+      if (pendingOgImageFile) {
+        setIsUploading(true);
+        try {
+          finalOgImage = await uploadMedia(pendingOgImageFile, MEDIA_FOLDERS.TEMPLATES);
+          setOgImage(finalOgImage);
+          setPendingOgImageFile(null);
+          if (localOgImagePreview) URL.revokeObjectURL(localOgImagePreview);
+          setLocalOgImagePreview("");
+        } catch (err: any) {
+          toast.error(err?.message || "Social share image upload failed");
+          setIsUploading(false);
+          setIsSavingSeo(false);
+          return;
+        }
+        setIsUploading(false);
+      }
+
+      let finalKeywords = [...metaKeywords];
+      if (metaKeywordInput.trim()) {
+        const parts = metaKeywordInput.trim().replace(/^,+|,+$/g, "").split(",").map((p) => p.trim()).filter(Boolean);
+        finalKeywords = Array.from(new Set([...finalKeywords, ...parts]));
+        setMetaKeywords(finalKeywords);
+        setMetaKeywordInput("");
+      }
+
+      const seoPayload = {
+        metaTitle: metaTitle.trim() || null,
+        meta_title: metaTitle.trim() || null,
+        metaDescription: metaDescription.trim() || null,
+        meta_description: metaDescription.trim() || null,
+        ogImage: finalOgImage || null,
+        og_image: finalOgImage || null,
+        metaKeywords: finalKeywords,
+        meta_keywords: finalKeywords,
+        canonicalUrl: canonicalUrl.trim() || null,
+        canonical_url: canonicalUrl.trim() || null,
+        noindex: Boolean(noindex),
+        is_noindex: Boolean(noindex),
+      };
+
+      console.log("[TemplateEditor] Quick-updating SEO metadata payload:", seoPayload);
+
+      const res = await fetchApi(`/templates/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(seoPayload),
+      });
+
+      console.log("[TemplateEditor] SEO metadata updated response:", res);
+      queryClient.invalidateQueries({ queryKey: ["adminTemplates"] });
+      queryClient.invalidateQueries({ queryKey: ["adminTemplate", id] });
+      toast.success("SEO & Social Sharing metadata saved successfully!");
+    } catch (err: any) {
+      console.error("[TemplateEditor] Failed to save SEO metadata:", err);
+      toast.error(err?.message || "Failed to update SEO metadata");
+    } finally {
+      setIsSavingSeo(false);
+    }
+  };
 
   // Category selection helpers
   const toggleCategory = (categoryId: string) => {
@@ -571,28 +861,114 @@ export default function TemplateEditorPage() {
       setIsUploading(false);
       return;
     }
-    setIsUploading(false);
+    let finalOgImage = ogImage.trim();
+    if (pendingOgImageFile) {
+      setIsUploading(true);
+      try {
+        finalOgImage = await uploadMedia(pendingOgImageFile, MEDIA_FOLDERS.TEMPLATES);
+        setOgImage(finalOgImage);
+        setPendingOgImageFile(null);
+        if (localOgImagePreview) URL.revokeObjectURL(localOgImagePreview);
+        setLocalOgImagePreview("");
+      } catch (err: any) {
+        toast.error(err?.message || "Social share image upload failed");
+        setIsUploading(false);
+        return;
+      }
+      setIsUploading(false);
+    }
+
+    let finalKeywords = [...metaKeywords];
+    if (metaKeywordInput.trim()) {
+      const parts = metaKeywordInput.trim().replace(/^,+|,+$/g, "").split(",").map((p) => p.trim()).filter(Boolean);
+      finalKeywords = Array.from(new Set([...finalKeywords, ...parts]));
+      setMetaKeywords(finalKeywords);
+      setMetaKeywordInput("");
+    }
+
+    // Upload any pending template asset files
+    const assetsWithPending = dynamicAssets.filter((a) => a.pendingFile);
+    const uploadedAssetUrls: Record<string, string> = {};
+    if (assetsWithPending.length > 0) {
+      setIsUploading(true);
+      try {
+        await Promise.all(
+          assetsWithPending.map(async (asset) => {
+            if (asset.pendingFile) {
+              const url = await uploadMedia(asset.pendingFile, MEDIA_FOLDERS.TEMPLATES);
+              uploadedAssetUrls[asset.id] = url;
+            }
+          })
+        );
+      } catch (err: any) {
+        toast.error(err?.message || "Failed to upload one or more template assets");
+        setIsUploading(false);
+        return;
+      }
+      setIsUploading(false);
+    }
+
+    // Build final template_assets map (key -> URL)
+    const finalTemplateAssets: Record<string, string> = {};
+    for (const asset of dynamicAssets) {
+      const trimmedKey = asset.key.trim();
+      if (!trimmedKey) continue;
+      const finalUrl = uploadedAssetUrls[asset.id] || asset.url.trim();
+      if (finalUrl) {
+        finalTemplateAssets[trimmedKey] = finalUrl;
+      }
+    }
 
     const payload = {
       name: slug,
       slug,
       templateName: trimmedTemplateName,
+      template_name: trimmedTemplateName,
       description: description.trim() || undefined,
       categoryIds: selectedCategoryIds,
+      category_ids: selectedCategoryIds,
       subCategoryIds: selectedSubCategoryIds,
+      sub_category_ids: selectedSubCategoryIds,
       subCategoryId: selectedSubCategoryIds[0], // fallback for backward compatibility
+      sub_category_id: selectedSubCategoryIds[0],
       type,
       price: type === "premium" ? Math.round(price * 100) : 0,
       componentKey: trimmedComponentKey,
+      component_key: trimmedComponentKey,
       tags,
       thumbnailUrl: finalThumbnail,
+      thumbnail_url: finalThumbnail,
       previewImages: finalPreviewImages,
+      preview_images: finalPreviewImages,
       previewVideoUrl: previewVideoUrl.trim() || null,
+      preview_video_url: previewVideoUrl.trim() || null,
       featuredPosition: featuredPosition === "" ? null : Number(featuredPosition),
+      featured_position: featuredPosition === "" ? null : Number(featuredPosition),
       adminBoost: Number(adminBoost) || 0,
+      admin_boost: Number(adminBoost) || 0,
       isActive,
+      is_active: isActive,
       formFields: processedFields,
+      form_fields: processedFields,
+      // SEO Metadata fields (dual casing for robust backend persistence)
+      metaTitle: metaTitle.trim() || null,
+      meta_title: metaTitle.trim() || null,
+      metaDescription: metaDescription.trim() || null,
+      meta_description: metaDescription.trim() || null,
+      ogImage: finalOgImage || null,
+      og_image: finalOgImage || null,
+      metaKeywords: finalKeywords,
+      meta_keywords: finalKeywords,
+      canonicalUrl: canonicalUrl.trim() || null,
+      canonical_url: canonicalUrl.trim() || null,
+      noindex: Boolean(noindex),
+      is_noindex: Boolean(noindex),
+      // Template Assets (admin-configured CDN asset URLs)
+      templateAssets: finalTemplateAssets,
+      template_assets: finalTemplateAssets,
     };
+
+    console.log("[TemplateEditor] Submitting payload to API:", payload);
 
     if (isEditing && id) {
       updateMutation.mutate({ id, payload });
@@ -949,6 +1325,786 @@ export default function TemplateEditorPage() {
               </div>
 
               <FormBuilder steps={steps} onChange={setSteps} />
+            </div>
+
+            {/* Card 3: SEO & Social Sharing (Open Graph) Studio */}
+            <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-xs space-y-6">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                    <Globe className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-base font-bold text-slate-800">SEO & Social Sharing (Open Graph)</h2>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        Production Ready
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      Search engine optimization, Google SERP appearance, and social card preview for WhatsApp, Twitter, and Facebook
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+                  {/* Live Preview Switcher Tab */}
+                  <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200/80 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setSeoPreviewTab("google")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                        seoPreviewTab === "google"
+                          ? "bg-white text-slate-800 shadow-xs"
+                          : "text-slate-500 hover:text-slate-800"
+                      }`}
+                    >
+                      <Search className="w-3.5 h-3.5 text-primary" /> Google SERP
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSeoPreviewTab("social")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                        seoPreviewTab === "social"
+                          ? "bg-white text-slate-800 shadow-xs"
+                          : "text-slate-500 hover:text-slate-800"
+                      }`}
+                    >
+                      <Share2 className="w-3.5 h-3.5 text-blue-500" /> Social Card
+                    </button>
+                  </div>
+
+                  {isEditing && (
+                    <button
+                      type="button"
+                      onClick={handleSaveSeoOnly}
+                      disabled={isSavingSeo || isUploading}
+                      className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      title="Directly save metadata updates to backend"
+                    >
+                      {isSavingSeo ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Saving SEO...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-3.5 h-3.5" /> Save SEO Metadata
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* ── Real-Time Interactive Live Previews ── */}
+              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  <span className="flex items-center gap-1.5">
+                    <Eye className="w-3.5 h-3.5 text-primary" />
+                    {seoPreviewTab === "google" ? "Live Google Search Snippet Preview" : "Live Social Sharing Card Preview (1200×630)"}
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-normal">Updated live as you type</span>
+                </div>
+
+                {seoPreviewTab === "google" ? (
+                  /* Google SERP Snippet Preview Box */
+                  <div className="p-4 rounded-xl bg-white border border-slate-200/90 shadow-xs space-y-1.5 font-sans">
+                    <div className="flex items-center gap-2 text-xs text-slate-600">
+                      <div className="w-4 h-4 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[9px] font-black">
+                        W
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="font-semibold text-slate-800 text-[11px]">WishForMoment</span>
+                        <span className="text-slate-400 text-[10px]">&rsaquo;</span>
+                        <span className="text-slate-500 text-[10px] truncate max-w-[280px]">
+                          templates &rsaquo; {categories.find((c) => selectedCategoryIds.includes(c.id))?.slug || "category"} &rsaquo; {name || "template"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <h3 className="text-base sm:text-lg font-medium text-[#1a0dab] hover:underline cursor-pointer leading-snug line-clamp-1">
+                      {metaTitle.trim() ||
+                        (templateName.trim()
+                          ? `${templateName.trim()} — ${subCategories.find((s) => selectedSubCategoryIds.includes(s.id))?.name || "Wish"} | WishForMoment`
+                          : "Customizable Greeting Card Template | WishForMoment")}
+                    </h3>
+
+                    <p className="text-xs sm:text-sm text-[#4d5156] leading-relaxed line-clamp-2">
+                      {metaDescription.trim() ||
+                        description.trim() ||
+                        "Send a beautiful personalized wish with this interactive greeting card template. Customize messages, photos, and music instantly on WishForMoment."}
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-3 pt-2 text-[10px] font-mono text-slate-400 border-t border-slate-100">
+                      <span className="flex items-center gap-1">
+                        Title Length:
+                        <span
+                          className={`font-bold ${
+                            metaTitle.length >= 40 && metaTitle.length <= 60
+                              ? "text-emerald-600"
+                              : metaTitle.length > 60
+                              ? "text-rose-600"
+                              : "text-amber-600"
+                          }`}
+                        >
+                          {metaTitle.length}/60 chars
+                        </span>
+                      </span>
+                      <span>&bull;</span>
+                      <span className="flex items-center gap-1">
+                        Description Length:
+                        <span
+                          className={`font-bold ${
+                            metaDescription.length >= 120 && metaDescription.length <= 160
+                              ? "text-emerald-600"
+                              : metaDescription.length > 160
+                              ? "text-rose-600"
+                              : "text-amber-600"
+                          }`}
+                        >
+                          {metaDescription.length}/160 chars
+                        </span>
+                      </span>
+                      {noindex && (
+                        <>
+                          <span>&bull;</span>
+                          <span className="text-rose-600 font-bold bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
+                            NOINDEX ACTIVE
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  /* Social Share Card Preview (WhatsApp / Facebook / Twitter) */
+                  <div className="max-w-md mx-auto rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-md">
+                    <div className="relative aspect-[1.91/1] bg-slate-900 overflow-hidden">
+                      {localOgImagePreview || ogImage || localPreviewUrl || thumbnailUrl ? (
+                        <img
+                          src={localOgImagePreview || ogImage || localPreviewUrl || thumbnailUrl}
+                          alt="Open Graph preview"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 text-white p-4 text-center">
+                          <Globe className="w-8 h-8 text-primary mb-2 opacity-80" />
+                          <p className="text-xs font-bold">{templateName || "Wish Template"}</p>
+                          <p className="text-[10px] text-slate-400">wishformoment.com</p>
+                        </div>
+                      )}
+                      <div className="absolute top-2 right-2 bg-slate-900/80 backdrop-blur-xs text-white text-[9px] font-bold px-2 py-0.5 rounded-md">
+                        1200 × 630
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 space-y-1 bg-slate-50 border-t border-slate-200/80">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        WISHFORMOMENT.COM
+                      </p>
+                      <h4 className="text-xs font-bold text-slate-800 line-clamp-1">
+                        {metaTitle.trim() || templateName.trim() || name || "Wish Template"}
+                      </h4>
+                      <p className="text-[11px] text-slate-500 line-clamp-2 leading-snug">
+                        {metaDescription.trim() ||
+                          description.trim() ||
+                          "Send personalized wishes with interactive animations, photos, and music."}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ── Meta Title Input & Auto-Generate ── */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                    Meta Title (Google & Social Headline)
+                    <span
+                      className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
+                        metaTitle.length >= 40 && metaTitle.length <= 60
+                          ? "bg-emerald-50 text-emerald-700 font-bold"
+                          : metaTitle.length > 60
+                          ? "bg-rose-50 text-rose-700 font-bold"
+                          : "bg-slate-100 text-slate-500"
+                      }`}
+                    >
+                      {metaTitle.length}/60
+                    </span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={autoGenerateMetaTitle}
+                    className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1"
+                  >
+                    <Sparkles className="w-3 h-3" /> Auto-generate
+                  </button>
+                </div>
+                <input
+                  value={metaTitle}
+                  onChange={(e) => setMetaTitle(e.target.value)}
+                  placeholder="e.g. Valentine Romantic Letter — Love & Romance | WishForMoment"
+                  maxLength={100}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-primary/15 focus:border-primary/40 transition-all placeholder:font-normal placeholder:text-slate-300"
+                />
+                <p className="text-[10px] text-slate-400">
+                  Recommended: 50–60 characters. Appears in search results, browser tabs, and message link previews.
+                </p>
+              </div>
+
+              {/* ── Meta Description Input & Auto-Generate ── */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                    Meta Description (SERP Snippet & Social Summary)
+                    <span
+                      className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
+                        metaDescription.length >= 120 && metaDescription.length <= 160
+                          ? "bg-emerald-50 text-emerald-700 font-bold"
+                          : metaDescription.length > 160
+                          ? "bg-rose-50 text-rose-700 font-bold"
+                          : "bg-slate-100 text-slate-500"
+                      }`}
+                    >
+                      {metaDescription.length}/160
+                    </span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={autoGenerateMetaDescription}
+                    className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1"
+                  >
+                    <Sparkles className="w-3 h-3" /> Auto-generate
+                  </button>
+                </div>
+                <textarea
+                  rows={3}
+                  value={metaDescription}
+                  onChange={(e) => setMetaDescription(e.target.value)}
+                  placeholder="e.g. Send a heartfelt Valentine's wish with our Romantic Letter template. Customize romantic photos, love notes, and background music instantly on WishForMoment."
+                  maxLength={300}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-800 outline-none focus:ring-2 focus:ring-primary/15 focus:border-primary/40 transition-all placeholder:text-slate-300 resize-none leading-relaxed"
+                />
+                <p className="text-[10px] text-slate-400">
+                  Recommended: 120–160 characters. A compelling summary to boost organic click-through rate from search engines.
+                </p>
+              </div>
+
+              {/* ── Social Share Image (OG Image) ── */}
+              <div className="space-y-2.5 p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                      <Share2 className="w-3.5 h-3.5 text-primary" /> Open Graph Social Image (1200 × 630)
+                    </label>
+                    <p className="text-[10px] text-slate-400">
+                      High-resolution image displayed when shared on WhatsApp, Facebook, Twitter, and iMessage
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleCopyThumbnailToOg}
+                      className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 hover:text-primary transition-all flex items-center gap-1 shadow-2xs"
+                    >
+                      <Copy className="w-3 h-3" /> Use Cover Thumbnail
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => ogFileInputRef.current?.click()}
+                      className="px-2.5 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-xs font-bold text-primary hover:bg-primary/20 transition-all flex items-center gap-1"
+                    >
+                      <Upload className="w-3 h-3" /> Upload Custom
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+                  <div className="sm:col-span-4 aspect-[1.91/1] rounded-xl overflow-hidden border border-slate-200 bg-slate-200 relative group">
+                    {localOgImagePreview || ogImage ? (
+                      <>
+                        <img
+                          src={localOgImagePreview || ogImage}
+                          alt="OG Preview"
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOgImage("");
+                            setPendingOgImageFile(null);
+                            if (localOgImagePreview) URL.revokeObjectURL(localOgImagePreview);
+                            setLocalOgImagePreview("");
+                          }}
+                          className="absolute top-1.5 right-1.5 p-1 rounded-md bg-rose-600 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </>
+                    ) : (
+                      <div
+                        onClick={() => ogFileInputRef.current?.click()}
+                        className="w-full h-full flex flex-col items-center justify-center text-slate-400 hover:text-primary cursor-pointer hover:bg-primary/5 transition-all text-center p-2"
+                      >
+                        <Upload className="w-4 h-4 mb-1" />
+                        <span className="text-[10px] font-bold">Click to upload</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="sm:col-span-8 space-y-1.5">
+                    <input
+                      type="url"
+                      value={ogImage}
+                      onChange={(e) => {
+                        setOgImage(e.target.value);
+                        setPendingOgImageFile(null);
+                        setLocalOgImagePreview("");
+                      }}
+                      placeholder="Or paste direct image URL (https://.../og.png)"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-mono text-slate-700 outline-none focus:ring-2 focus:ring-primary/15 focus:border-primary/40 transition-all placeholder:text-slate-300"
+                    />
+                    <p className="text-[10px] text-slate-400">
+                      If left empty, social networks automatically fall back to the cover thumbnail.
+                    </p>
+                  </div>
+                </div>
+
+                <input
+                  type="file"
+                  ref={ogFileInputRef}
+                  onChange={handleOgFileSelect}
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                />
+              </div>
+
+              {/* ── Meta Keywords (Tags) ── */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-600 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Tag className="w-3.5 h-3.5 text-primary" /> Meta Keywords ({metaKeywords.length})
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-normal">Press Enter or comma to add</span>
+                </label>
+
+                <div className="flex gap-2">
+                  <input
+                    value={metaKeywordInput}
+                    onChange={(e) => setMetaKeywordInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === ",") {
+                        e.preventDefault();
+                        handleAddKeyword();
+                      }
+                    }}
+                    placeholder="Type keyword and press Enter (e.g. romantic wish, love letter, valentine card)..."
+                    className="flex-1 px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-primary/15 focus:border-primary/40 transition-all placeholder:text-slate-300"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddKeyword}
+                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors"
+                  >
+                    Add
+                  </button>
+                </div>
+
+                {metaKeywords.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {metaKeywords.map((keyword, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 text-xs font-medium"
+                      >
+                        {keyword}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveKeyword(keyword)}
+                          className="hover:text-blue-900 transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* ── Advanced: Canonical URL & Search Indexing Switch ── */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-100">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-slate-600 flex items-center justify-between">
+                    <span className="flex items-center gap-1">
+                      <LinkIcon className="w-3 h-3 text-slate-400" /> Canonical URL Override
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-normal">Optional</span>
+                  </label>
+                  <input
+                    type="url"
+                    value={canonicalUrl}
+                    onChange={(e) => setCanonicalUrl(e.target.value)}
+                    placeholder="e.g. https://wishformoment.com/en/templates/..."
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono text-slate-700 outline-none focus:ring-2 focus:ring-primary/15 focus:border-primary/40 transition-all placeholder:text-slate-300"
+                  />
+                  <p className="text-[10px] text-slate-400">
+                    Leave empty to use automatic canonical URL based on the route.
+                  </p>
+                </div>
+
+                <div className="flex flex-col justify-between space-y-2 p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-800">Search Engine Indexing</h4>
+                      <p className="text-[10px] text-slate-400">
+                        {noindex
+                          ? "Search engines are instructed NOT to index (noindex, nofollow)"
+                          : "Search engines are allowed to index and rank this page (index, follow)"}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={!noindex}
+                      onCheckedChange={(checked) => setNoindex(!checked)}
+                    />
+                  </div>
+                  <div className="flex items-center gap-1 text-[10px] font-semibold">
+                    {!noindex ? (
+                      <span className="text-emerald-600 flex items-center gap-1">
+                        <Check className="w-3 h-3" /> Indexed by Google & Bing
+                      </span>
+                    ) : (
+                      <span className="text-rose-600 flex items-center gap-1">
+                        <EyeOff className="w-3 h-3" /> Hidden with noindex
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 4: Template Assets (Dynamic Backgrounds, Audio & Media in Database) */}
+            <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-xs space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold shadow-xs">
+                    <Layers className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-base font-bold text-slate-800">Template Assets</h2>
+                      <Badge variant="outline" className="text-[10px] font-semibold bg-indigo-50/50 text-indigo-700 border-indigo-200">
+                        {dynamicAssets.length} {dynamicAssets.length === 1 ? "Asset" : "Assets"}
+                      </Badge>
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Dynamically manage background graphics, music, overlays, and decorative assets stored directly in the database.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleAddAsset()}
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 shadow-sm hover:shadow transition-all active:scale-[0.98]"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Asset
+                </button>
+              </div>
+
+              {/* Quick Preset Suggestions */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-600 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    Quick Add Common Asset Keys:
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono">click to add</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    "engagement_invitation_bg",
+                    "first_section_bg_overlay",
+                    "second_screen_bg",
+                    "screen2_rose_frame",
+                    "our_memories_bg",
+                    "officially_bg",
+                    "proposal_ring_screen",
+                    "left_door",
+                    "right_door",
+                    "story_right_frame",
+                    "story_middle_frame",
+                    "reveal_button",
+                    "story_background",
+                    "gift_box_closed",
+                    "gift_box_open",
+                    "gift_podium",
+                    "open_gift",
+                    "pink_heart",
+                    "yellow_star",
+                    "background_music",
+                  ].map((preset) => {
+                    const alreadyExists = dynamicAssets.some((a) => a.key === preset);
+                    return (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => handleAddAsset(preset)}
+                        disabled={alreadyExists}
+                        className={`text-[10px] font-mono px-2.5 py-1 rounded-lg border transition-all ${
+                          alreadyExists
+                            ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                            : "bg-white text-slate-700 border-slate-200 hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/30"
+                        }`}
+                      >
+                        {alreadyExists ? `✓ ${preset}` : `+ ${preset}`}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Empty State */}
+              {dynamicAssets.length === 0 ? (
+                <div className="text-center py-10 px-4 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-500 mx-auto flex items-center justify-center">
+                    <Image className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-700">No Template Assets Added Yet</h3>
+                    <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
+                      Add custom background images, audio tracks, or decorative overlays. All assets are saved dynamically to this template's database record.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleAddAsset()}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white border border-indigo-200 text-indigo-600 text-xs font-bold hover:bg-indigo-50 transition-all shadow-xs"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add First Asset
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {dynamicAssets.map((asset, index) => {
+                    const displayUrl = asset.localPreview || asset.url;
+                    const isAudio =
+                      asset.key.toLowerCase().includes("music") ||
+                      asset.key.toLowerCase().includes("audio") ||
+                      displayUrl.endsWith(".mp3") ||
+                      displayUrl.endsWith(".wav") ||
+                      displayUrl.endsWith(".ogg") ||
+                      (asset.pendingFile && asset.pendingFile.type.startsWith("audio/"));
+                    const isDuplicate =
+                      Boolean(asset.key.trim()) &&
+                      dynamicAssets.filter((a) => a.key.trim() === asset.key.trim()).length > 1;
+
+                    return (
+                      <div
+                        key={asset.id}
+                        className={`p-4 rounded-2xl border transition-all space-y-3 bg-white ${
+                          isDuplicate
+                            ? "border-rose-300 ring-2 ring-rose-100"
+                            : "border-slate-200 shadow-xs hover:border-slate-300"
+                        }`}
+                      >
+                        {/* Top: Asset Key & Action Tools */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-slate-100">
+                          <div className="flex-1 flex items-center gap-2 min-w-0">
+                            <span className="text-[11px] font-bold text-slate-500 font-mono">
+                              #{index + 1}
+                            </span>
+                            <div className="flex-1 flex items-center gap-2">
+                              <span className="text-xs font-bold text-slate-700 whitespace-nowrap">
+                                Asset Key:
+                              </span>
+                              <input
+                                type="text"
+                                value={asset.key}
+                                onChange={(e) => handleUpdateAssetKey(asset.id, e.target.value)}
+                                placeholder="e.g. engagement_invitation_bg"
+                                className={`flex-1 min-w-[140px] px-2.5 py-1.5 rounded-lg border text-xs font-mono outline-none transition-all ${
+                                  isDuplicate
+                                    ? "border-rose-400 bg-rose-50/50 text-rose-800 focus:ring-2 focus:ring-rose-200"
+                                    : "border-slate-200 bg-slate-50 text-slate-800 focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                                }`}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                            {asset.key.trim() && (
+                              <button
+                                type="button"
+                                onClick={() => handleCopyKeyCode(asset.key)}
+                                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-all"
+                                title="Copy React prop expression"
+                              >
+                                {copiedAssetKey === asset.key ? (
+                                  <>
+                                    <Check className="w-3 h-3 text-emerald-600" />
+                                    <span className="text-emerald-600">Copied</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="w-3 h-3" />
+                                    <span>templateAssets.{asset.key}</span>
+                                  </>
+                                )}
+                              </button>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveAsset(asset.id)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                              title="Delete this asset"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {isDuplicate && (
+                          <p className="text-[10px] font-semibold text-rose-600">
+                            Warning: Key "{asset.key}" is used more than once. Keys must be unique!
+                          </p>
+                        )}
+
+                        {/* Content: Preview + Upload/URL Controls */}
+                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3.5 items-center">
+                          {/* Preview Thumbnail Box */}
+                          <div className="sm:col-span-4 rounded-xl border border-slate-200 bg-slate-50/60 overflow-hidden min-h-[90px] flex items-center justify-center p-1.5 relative">
+                            {displayUrl ? (
+                              isValidWebUrl(displayUrl) ? (
+                                isAudio ? (
+                                  <div className="flex flex-col items-center justify-center p-2 text-center w-full">
+                                    <Music className="w-6 h-6 text-indigo-500 mb-1" />
+                                    <span className="text-[10px] font-bold text-slate-700 truncate max-w-full">
+                                      Audio Track
+                                    </span>
+                                    <audio
+                                      src={displayUrl}
+                                      controls
+                                      className="w-full h-7 mt-1.5"
+                                    />
+                                  </div>
+                                ) : (
+                                  <img
+                                    src={displayUrl}
+                                    alt={asset.key || "Asset preview"}
+                                    className="w-full max-h-24 object-contain rounded-lg bg-[repeating-conic-gradient(#f1f5f9_0%_25%,#fff_0%_50%)] bg-[length:12px_12px]"
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).style.display = "none";
+                                    }}
+                                  />
+                                )
+                              ) : (
+                                <div className="flex flex-col items-center justify-center p-2 text-center text-amber-700 bg-amber-50/70 rounded-lg w-full">
+                                  <AlertCircle className="w-5 h-5 mb-1 text-amber-500" />
+                                  <span className="text-[10px] font-bold">Local File Path</span>
+                                  <span className="text-[9px] font-mono truncate max-w-full text-amber-800" title={displayUrl}>
+                                    {displayUrl}
+                                  </span>
+                                  <span className="text-[9px] text-amber-600 mt-0.5">Upload to S3 to host on CDN</span>
+                                </div>
+                              )
+                            ) : (
+                              <div className="flex flex-col items-center justify-center text-slate-400 p-3 text-center">
+                                <Image className="w-5 h-5 mb-1 text-slate-300" />
+                                <span className="text-[10px]">No asset selected</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Controls (File Upload & CDN URL Input) */}
+                          <div className="sm:col-span-8 space-y-2.5">
+                            <input
+                              ref={(el) => {
+                                assetFileInputRefs.current[asset.id] = el;
+                              }}
+                              type="file"
+                              accept="image/*,audio/*,video/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleAssetFileSelect(asset.id, file);
+                                e.target.value = "";
+                              }}
+                            />
+
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                disabled={uploadingAssetId === asset.id}
+                                onClick={() => assetFileInputRefs.current[asset.id]?.click()}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/40 hover:text-indigo-700 shadow-2xs transition-all shrink-0 disabled:opacity-50"
+                              >
+                                {uploadingAssetId === asset.id ? (
+                                  <>
+                                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                    <span>Uploading...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Upload className="w-3.5 h-3.5" />
+                                    <span>{isValidWebUrl(asset.url) ? "Replace in S3" : "Upload to S3"}</span>
+                                  </>
+                                )}
+                              </button>
+
+                              <div className="relative flex-1 min-w-0">
+                                <input
+                                  type="text"
+                                  value={uploadingAssetId === asset.id ? "Uploading to S3..." : asset.url}
+                                  readOnly={uploadingAssetId === asset.id}
+                                  onChange={(e) => handleUpdateAssetUrl(asset.id, e.target.value)}
+                                  placeholder="Or paste direct CDN URL (https://...)"
+                                  className="w-full px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono text-slate-700 outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all placeholder:text-slate-300"
+                                />
+                                {isValidWebUrl(asset.url) && (
+                                  <a
+                                    href={asset.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition-colors p-1"
+                                    title="Open link in new tab"
+                                  >
+                                    <ExternalLink className="w-3 h-3" />
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Status label */}
+                            <div className="flex items-center justify-between text-[10px]">
+                              {uploadingAssetId === asset.id ? (
+                                <span className="text-indigo-600 font-semibold flex items-center gap-1">
+                                  <RefreshCw className="w-3 h-3 animate-spin shrink-0" /> Uploading directly to AWS S3 bucket...
+                                </span>
+                              ) : isValidWebUrl(asset.url) ? (
+                                <span className="text-emerald-600 font-medium flex items-center gap-1 truncate max-w-[360px]" title={asset.url}>
+                                  <Check className="w-3 h-3 shrink-0" /> CDN: {asset.url}
+                                </span>
+                              ) : asset.url ? (
+                                <span className="text-amber-600 font-medium flex items-center gap-1 truncate max-w-[360px]" title={asset.url}>
+                                  <AlertCircle className="w-3 h-3 shrink-0" /> Local: {asset.url} (click "Upload to S3")
+                                </span>
+                              ) : (
+                                <span className="text-slate-400">
+                                  Upload a media file (Image, Audio, Video) or enter a hosted URL.
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
