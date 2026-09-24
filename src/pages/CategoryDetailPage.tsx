@@ -657,22 +657,69 @@ export default function CategoryDetailPage() {
                 </div>
               </div>
 
-              {/* Theme Color Picker */}
-              <div className="space-y-2 pt-2 border-t border-border/50">
+              {/* Theme Color & Brand Gradient Section */}
+              <div className="space-y-3 pt-3 border-t border-border/50">
                 <div className="flex items-center justify-between">
                   <div>
                     <label className="text-xs font-bold text-slate-700 dark:text-slate-200">
                       Theme Color & Brand Gradient
                     </label>
-                    <p className="text-[11px] text-muted-foreground">Applied to category titles, accents, and card highlights</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Applied to category hero graphics, badges, accent highlights, and public cards
+                    </p>
                   </div>
-                  <div
-                    className="w-7 h-7 rounded-lg border border-border shadow-xs"
-                    style={{ background: themeColor || "#6C41CF" }}
-                  />
                 </div>
-                <div className="pt-1">
-                  <GradientColorPicker value={themeColor} onChange={setThemeColor} />
+
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+                  <div className="sm:col-span-8">
+                    <GradientColorPicker value={themeColor} onChange={setThemeColor} />
+                  </div>
+                  <div className="sm:col-span-4">
+                    <input
+                      type="text"
+                      value={themeColor}
+                      onChange={(e) => setThemeColor(e.target.value)}
+                      placeholder="#6C41CF or linear-gradient(...)"
+                      className="w-full h-10 px-3 rounded-xl bg-background border border-border text-xs font-mono font-medium outline-none focus:border-primary/50 text-foreground"
+                      title="Directly edit or paste HEX or CSS gradient"
+                    />
+                  </div>
+                </div>
+
+                {/* Quick Brand Preset Chips */}
+                <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mr-1">
+                    Quick Presets:
+                  </span>
+                  {[
+                    { label: "Purple", value: "#6C41CF" },
+                    { label: "Pink", value: "#FF8BC4" },
+                    { label: "Blue", value: "#3B82F6" },
+                    { label: "Emerald", value: "#10B981" },
+                    { label: "Brand Fusion", value: "linear-gradient(135deg, #6c41cf 0%, #ff8bc4 100%)" },
+                    { label: "Sunset Horizon", value: "linear-gradient(135deg, #f59e0b 0%, #e11d48 100%)" },
+                    { label: "Ocean Splash", value: "linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%)" },
+                  ].map((p) => {
+                    const isSelected = themeColor?.toLowerCase().replace(/\s+/g, "") === p.value.toLowerCase().replace(/\s+/g, "");
+                    return (
+                      <button
+                        key={p.label}
+                        type="button"
+                        onClick={() => setThemeColor(p.value)}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all border cursor-pointer ${
+                          isSelected
+                            ? "bg-primary/10 border-primary text-primary font-bold shadow-2xs"
+                            : "bg-background hover:bg-muted border-border/80 text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        <span
+                          className="w-2.5 h-2.5 rounded-full border border-black/10 shrink-0"
+                          style={{ background: p.value }}
+                        />
+                        <span>{p.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -1271,8 +1318,25 @@ export default function CategoryDetailPage() {
 
             {/* Theme color */}
             <div className="space-y-2">
-              <label className="text-xs font-bold text-foreground">Theme Color</label>
-              <GradientColorPicker value={subThemeColor} onChange={setSubThemeColor} />
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-foreground">Theme Color & Brand Gradient</label>
+                <span className="text-[10px] font-mono text-muted-foreground">Applied to subcategory tags and cards</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                <div className="sm:col-span-8">
+                  <GradientColorPicker value={subThemeColor} onChange={setSubThemeColor} />
+                </div>
+                <div className="sm:col-span-4">
+                  <input
+                    type="text"
+                    value={subThemeColor}
+                    onChange={(e) => setSubThemeColor(e.target.value)}
+                    placeholder="#FF8BC4"
+                    className="w-full h-10 px-3 rounded-xl bg-background border border-border text-xs font-mono font-medium outline-none focus:border-primary"
+                    title="Directly edit HEX or CSS gradient"
+                  />
+                </div>
+              </div>
             </div>
 
             {/* SEO Description */}
