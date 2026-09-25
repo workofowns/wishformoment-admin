@@ -50,7 +50,10 @@ function normalizeFieldType(rawType: any): FormField["type"] {
   if (t === "textarea" || t === "longtext" || t === "message") {
     return "textarea";
   }
-  if (t === "date" || t === "datetime" || t === "time") {
+  if (t === "time") {
+    return "time";
+  }
+  if (t === "date" || t === "datetime") {
     return "date";
   }
   if (t === "select" || t === "dropdown" || t === "options" || t === "choice" || t === "radio") {

@@ -16,7 +16,7 @@ import {
 export interface FormField {
   name: string;
   label: string;
-  type: "text" | "textarea" | "date" | "select" | "image" | "music";
+  type: "text" | "textarea" | "date" | "time" | "select" | "image" | "music";
   placeholder: string;
   defaultValue?: string;
   _files?: File[]; // plural storage for pending default image uploads
@@ -37,7 +37,7 @@ interface FieldBuilderProps {
   onChange: (fields: FormField[]) => void;
 }
 
-const fieldTypes = ["text", "textarea", "date", "select", "image", "music"] as const;
+const fieldTypes = ["text", "textarea", "date", "time", "select", "image", "music"] as const;
 
 const FieldBuilder = ({ fields, onChange }: FieldBuilderProps) => {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -217,6 +217,9 @@ const FieldBuilder = ({ fields, onChange }: FieldBuilderProps) => {
                           const update: Partial<FormField> = { type: newType };
                           if (newType === "date" && !field.defaultValue) {
                             update.defaultValue = new Date().toISOString().split('T')[0];
+                          }
+                          if (newType === "time" && !field.defaultValue) {
+                            update.defaultValue = "15:00";
                           }
                           updateField(i, update);
                         }}
