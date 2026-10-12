@@ -39,10 +39,19 @@ import {
   ShieldCheck,
   Lock,
   Send,
+  RotateCcw,
 } from "lucide-react";
 
 import { fetchApi } from "@/lib/api";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -50,16 +59,20 @@ interface UserDetails {
   id: string;
   email: string;
   display_name: string | null;
+  phone: string | null;
   avatar_url: string | null;
-  role: "user" | "admin";
-  is_verified: boolean;
-  provider: "email" | "google" | "facebook";
-  provider_id: string | null;
-  last_login_at: string | null;
-  deletion_scheduled_at: string | null;
-  deletion_due_at: string | null;
+  cover_url: string | null;
+  bio: string | null;
+  website: string | null;
+  location: string | null;
+  role: string;
+  is_active: boolean;
+  email_verified: boolean;
   created_at: string;
   updated_at: string;
+  last_login_at: string | null;
+  deletion_scheduled_at: string | null;
+  deletion_reason: string | null;
 }
 
 interface UserStats {
@@ -72,6 +85,7 @@ interface UserStats {
   paid_payments: number;
   failed_payments: number;
   pending_payments: number;
+  refunded_payments?: number;
   total_spent_inr: number;
 }
 
@@ -87,7 +101,7 @@ interface PaymentItem {
   amount: number;
   currency: string;
   amount_inr: number;
-  status: "created" | "paid" | "failed";
+  status: "created" | "paid" | "failed" | "refunded";
   wish_id: string | null;
   created_at: string;
   updated_at: string;
@@ -95,6 +109,10 @@ interface PaymentItem {
   template_name: string | null;
   template_slug: string | null;
   template_thumbnail: string | null;
+  razorpay_refund_id?: string | null;
+  refund_amount?: number | null;
+  refund_reason?: string | null;
+  refunded_at?: string | null;
 }
 
 interface PaymentsResponse {
@@ -189,6 +207,10 @@ const UserDetailPage = () => {
   const [paymentsPage, setPaymentsPage] = useState(1);
   const [paymentsStatus, setPaymentsStatus] = useState("all");
   const [paymentsSearch, setPaymentsSearch] = useState("");
+
+  // Refund modal state
+  const [refundModalPayment, setRefundModalPayment] = useState<PaymentItem | null>(null);
+  const [refundReason, setRefundReason] = useState("");
 
   const [wishesPage, setWishesPage] = useState(1);
   const [wishesFilter, setWishesFilter] = useState("all");
@@ -299,6 +321,24 @@ const UserDetailPage = () => {
       toast.success("Wish deleted successfully");
     },
     onError: (err: any) => toast.error(err.message || "Failed to delete wish"),
+  });
+
+  const refundPaymentMutation = useMutation({
+    mutationFn: ({ paymentId, reason }: { paymentId: string; reason?: string }) =>
+      fetchApi(`/payments/${paymentId}/refund`, {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["adminUserPayments", id] });
+      queryClient.invalidateQueries({ queryKey: ["adminUserDetail", id] });
+      queryClient.invalidateQueries({ queryKey: ["adminUserLogs", id] });
+      queryClient.invalidateQueries({ queryKey: ["adminPayments"] });
+      toast.success("Payment refunded successfully via Razorpay");
+      setRefundModalPayment(null);
+      setRefundReason("");
+    },
+    onError: (err: any) => toast.error(err.message || "Failed to process refund"),
   });
 
   const refreshAll = () => {
@@ -448,8 +488,8 @@ const UserDetailPage = () => {
                   {/* Role Badge */}
                   <span
                     className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${user.role === "admin"
-                        ? "bg-purple-100 text-purple-700 border border-purple-300"
-                        : "bg-muted text-foreground/80 border border-border"
+                      ? "bg-purple-100 text-purple-700 border border-purple-300"
+                      : "bg-muted text-foreground/80 border border-border"
                       }`}
                   >
                     <Shield className="w-3 h-3" /> {user.role}
@@ -491,8 +531,8 @@ const UserDetailPage = () => {
                   updateUserMutation.mutate({ isVerified: !user.is_verified })
                 }
                 className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${user.is_verified
-                    ? "bg-slate-100 hover:bg-slate-200 text-slate-700"
-                    : "bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
+                  ? "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                  : "bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
                   }`}
               >
                 <BadgeCheck className="w-3.5 h-3.5" />
@@ -614,7 +654,7 @@ const UserDetailPage = () => {
               </div>
               <p className="text-2xl font-black text-foreground">{stats.total_payments}</p>
               <p className="text-[10px] font-semibold text-muted-foreground mt-0.5">
-                {stats.paid_payments} Paid · {stats.failed_payments} Failed
+                {stats.paid_payments} Paid · {stats.refunded_payments ? `${stats.refunded_payments} Refunded · ` : ""}{stats.failed_payments} Failed
               </p>
             </div>
           </div>
@@ -664,6 +704,7 @@ const UserDetailPage = () => {
               >
                 <option value="all">All Status</option>
                 <option value="paid">Paid</option>
+                <option value="refunded">Refunded</option>
                 <option value="created">Pending</option>
                 <option value="failed">Failed</option>
               </select>
@@ -681,13 +722,14 @@ const UserDetailPage = () => {
                     <th className="py-3.5 px-4">Amount</th>
                     <th className="py-3.5 px-4">Status</th>
                     <th className="py-3.5 px-4">Payment ID</th>
-                    <th className="py-3.5 px-4 text-right">Date</th>
+                    <th className="py-3.5 px-4">Date</th>
+                    <th className="py-3.5 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/40">
                   {isPaymentsLoading ? (
                     <tr>
-                      <td colSpan={6} className="py-10 text-center text-muted-foreground">
+                      <td colSpan={7} className="py-10 text-center text-muted-foreground">
                         <div className="flex items-center justify-center gap-2">
                           <RefreshCw className="w-4 h-4 animate-spin text-primary" />
                           <span>Loading payments...</span>
@@ -696,7 +738,7 @@ const UserDetailPage = () => {
                     </tr>
                   ) : !paymentsData?.rows || paymentsData.rows.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-10 text-center text-muted-foreground">
+                      <td colSpan={7} className="py-10 text-center text-muted-foreground">
                         <CreditCard className="w-8 h-8 mx-auto mb-2 text-muted-foreground/40" />
                         <p className="font-semibold">No payment records found for this user.</p>
                       </td>
@@ -749,17 +791,21 @@ const UserDetailPage = () => {
                           <span
                             className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${p.status === "paid"
                                 ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                : p.status === "failed"
-                                  ? "bg-rose-50 text-rose-700 border border-rose-200"
-                                  : "bg-amber-50 text-amber-700 border border-amber-200"
+                                : p.status === "refunded"
+                                  ? "bg-purple-50 text-purple-700 border border-purple-200"
+                                  : p.status === "failed"
+                                    ? "bg-rose-50 text-rose-700 border border-rose-200"
+                                    : "bg-amber-50 text-amber-700 border border-amber-200"
                               }`}
                           >
                             <span
                               className={`w-1.5 h-1.5 rounded-full ${p.status === "paid"
                                   ? "bg-emerald-500"
-                                  : p.status === "failed"
-                                    ? "bg-rose-500"
-                                    : "bg-amber-500"
+                                  : p.status === "refunded"
+                                    ? "bg-purple-500"
+                                    : p.status === "failed"
+                                      ? "bg-rose-500"
+                                      : "bg-amber-500"
                                 }`}
                             />
                             {p.status}
@@ -784,8 +830,35 @@ const UserDetailPage = () => {
                         </td>
 
                         {/* Date */}
-                        <td className="py-3 px-4 text-right font-medium text-muted-foreground">
+                        <td className="py-3 px-4 text-muted-foreground font-medium">
                           {format(new Date(p.created_at), "MMM d, yyyy p")}
+                        </td>
+
+                        {/* Actions */}
+                        <td className="py-3 px-4 text-right">
+                          {p.status === "paid" ? (
+                            <button
+                              onClick={() => {
+                                setRefundModalPayment(p);
+                                setRefundReason("");
+                              }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-xl bg-rose-50 text-rose-600 border border-rose-200/80 hover:bg-rose-600 hover:text-white hover:border-rose-600 transition-all shadow-xs cursor-pointer active:scale-95"
+                              title="Issue refund to user"
+                            >
+                              <RotateCcw className="w-3 h-3" />
+                              <span>Refund</span>
+                            </button>
+                          ) : p.status === "refunded" ? (
+                            <span
+                              className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-600 bg-rose-50/60 px-2 py-0.5 rounded-lg border border-rose-100"
+                              title={p.razorpay_refund_id ? `Refund ID: ${p.razorpay_refund_id}` : "Refunded"}
+                            >
+                              <CheckCircle2 className="w-3 h-3" />
+                              Refunded
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground/30 text-xs">—</span>
+                          )}
                         </td>
                       </tr>
                     ))
@@ -1150,10 +1223,10 @@ const UserDetailPage = () => {
                         <td className="py-3 px-4 whitespace-nowrap">
                           <span
                             className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${log.actor_type === "admin"
-                                ? "bg-purple-100 text-purple-700 border border-purple-200"
-                                : log.actor_type === "system"
-                                  ? "bg-blue-50 text-blue-700 border border-blue-200"
-                                  : "bg-slate-100 text-slate-700 border border-slate-200"
+                              ? "bg-purple-100 text-purple-700 border border-purple-200"
+                              : log.actor_type === "system"
+                                ? "bg-blue-50 text-blue-700 border border-blue-200"
+                                : "bg-slate-100 text-slate-700 border border-slate-200"
                               }`}
                           >
                             <span className="font-black">{log.actor_type}:</span> {log.actor_name}
@@ -1220,6 +1293,134 @@ const UserDetailPage = () => {
             )}
           </div>
         </div>
+
+        {/* ── Refund Confirmation Modal ── */}
+        <Dialog
+          open={!!refundModalPayment}
+          onOpenChange={(open) => {
+            if (!open) {
+              setRefundModalPayment(null);
+              setRefundReason("");
+            }
+          }}
+        >
+          <DialogContent className="sm:max-w-md bg-card border-border/80">
+            <DialogHeader>
+              <div className="flex items-center gap-2.5 text-rose-600">
+                <div className="p-2 rounded-xl bg-rose-50 border border-rose-200">
+                  <RotateCcw className="w-5 h-5" />
+                </div>
+                <DialogTitle className="text-lg font-black text-foreground">
+                  Refund Payment
+                </DialogTitle>
+              </div>
+              <DialogDescription className="text-xs text-muted-foreground pt-1">
+                Issue a refund to the customer via Razorpay. This will process immediately.
+              </DialogDescription>
+            </DialogHeader>
+
+            {refundModalPayment && (
+              <div className="space-y-4 py-2">
+                {/* Summary card */}
+                <div className="p-4 rounded-2xl bg-muted/40 border border-border/60 space-y-2.5 text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">User:</span>
+                    <span className="font-bold text-foreground">{userData?.user?.display_name || userData?.user?.email}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Order ID:</span>
+                    <span className="font-mono font-medium text-foreground">{refundModalPayment.razorpay_order_id}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Payment ID:</span>
+                    <span className="font-mono font-medium text-foreground">{refundModalPayment.razorpay_payment_id || "—"}</span>
+                  </div>
+                  {refundModalPayment.template_name && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Template:</span>
+                      <span className="font-bold text-foreground">{refundModalPayment.template_name}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center pt-2 border-t border-border/40 text-sm">
+                    <span className="font-bold text-foreground">Refund Amount:</span>
+                    <span className="font-black text-rose-600 text-base">
+                      {formatAmountDisplay(refundModalPayment.amount, refundModalPayment.currency)}
+                      {refundModalPayment.currency !== "INR" && (
+                        <span className="text-xs font-normal text-muted-foreground ml-1">
+                          ({formatInr(refundModalPayment.amount_inr)})
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Warning alert */}
+                <div className="p-3.5 rounded-xl bg-rose-50/70 border border-rose-200/80 flex items-start gap-2.5 text-xs text-rose-800">
+                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-bold">Important Notice</p>
+                    <p className="text-[11px] leading-relaxed text-rose-700">
+                      The payment will be refunded to the customer&apos;s original payment method via Razorpay. Any associated published wish will be unpublished and template usage count will be adjusted.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Reason input */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-foreground">
+                    Reason for Refund (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={refundReason}
+                    onChange={(e) => setRefundReason(e.target.value)}
+                    placeholder="e.g. Customer requested cancellation, accidental charge"
+                    className="w-full px-3.5 py-2 text-xs rounded-xl bg-card border border-border text-foreground outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
+              </div>
+            )}
+
+            <DialogFooter className="gap-2 sm:gap-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setRefundModalPayment(null);
+                  setRefundReason("");
+                }}
+                disabled={refundPaymentMutation.isPending}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-muted-foreground hover:bg-muted transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (refundModalPayment) {
+                    refundPaymentMutation.mutate({
+                      paymentId: refundModalPayment.id,
+                      reason: refundReason.trim() || undefined,
+                    });
+                  }
+                }}
+                disabled={refundPaymentMutation.isPending}
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 text-white hover:bg-rose-700 transition-all shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {refundPaymentMutation.isPending ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Processing Refund…</span>
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Confirm Refund</span>
+                  </>
+                )}
+              </button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

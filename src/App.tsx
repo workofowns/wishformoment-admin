@@ -5,7 +5,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index";
 import Categories from "./pages/Categories";
+import CategoryDetailPage from "./pages/CategoryDetailPage";
 import Templates from "./pages/Templates";
+import TemplateEditorPage from "./pages/TemplateEditorPage";
 import TrendingTemplates from "./pages/TrendingTemplates";
 import UsersPage from "./pages/UsersPage";
 import UserDetailPage from "./pages/UserDetailPage";
@@ -17,13 +19,20 @@ import ContactMessages from "./pages/ContactMessages";
 import FeedbackList from "./pages/FeedbackList";
 import AIWaitlist from "./pages/AIWaitlist";
 import Analytics from "./pages/Analytics";
+import RankingsPage from "./pages/RankingsPage";
 import Media from "./pages/Media";
 import CurrencyRates from "./pages/CurrencyRates";
 import PaymentHistory from "./pages/PaymentHistory";
 import CacheManagement from "./pages/CacheManagement";
 import './App.scss';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const RequireAuth = ({ children }: { children: JSX.Element }) => {
   const token = localStorage.getItem("adminToken");
@@ -43,8 +52,15 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<RequireAuth><Index /></RequireAuth>} />
           <Route path="/analytics" element={<RequireAuth><Analytics /></RequireAuth>} />
+          <Route path="/rankings" element={<RequireAuth><RankingsPage /></RequireAuth>} />
           <Route path="/categories" element={<RequireAuth><Categories /></RequireAuth>} />
+          <Route path="/categories/new" element={<RequireAuth><CategoryDetailPage /></RequireAuth>} />
+          <Route path="/categories/:id" element={<RequireAuth><CategoryDetailPage /></RequireAuth>} />
+          <Route path="/categories/:id/edit" element={<RequireAuth><CategoryDetailPage /></RequireAuth>} />
           <Route path="/templates" element={<RequireAuth><Templates /></RequireAuth>} />
+          <Route path="/templates/new" element={<RequireAuth><TemplateEditorPage /></RequireAuth>} />
+          <Route path="/templates/edit/:id" element={<RequireAuth><TemplateEditorPage /></RequireAuth>} />
+          <Route path="/templates/:id/edit" element={<RequireAuth><TemplateEditorPage /></RequireAuth>} />
           <Route path="/trending-templates" element={<RequireAuth><TrendingTemplates /></RequireAuth>} />
           <Route path="/currency-rates" element={<RequireAuth><CurrencyRates /></RequireAuth>} />
           <Route path="/payments" element={<RequireAuth><PaymentHistory /></RequireAuth>} />

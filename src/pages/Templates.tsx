@@ -1,39 +1,14 @@
-import { useEffect, useState, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchApi, uploadMedia, MEDIA_FOLDERS } from "@/lib/api";
+import { fetchApi } from "@/lib/api";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import FormBuilder, { FormStep } from "@/components/dashboard/FormBuilder";
 import {
-  Plus, Search, Crown, Edit2, Trash2, X, Check, Zap, RefreshCw, Upload, Layers,
-  Globe, Layout, Tag, Box
+  Plus, Search, Crown, Edit2, Trash2, Layout, Box, Sparkles, Zap, Globe
 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-
-interface FormField {
-  name: string;
-  label: string;
-  type: "text" | "textarea" | "date" | "select" | "image";
-  placeholder: string;
-  defaultValue?: string;
-  _files?: File[]; // plural storage for pending default image uploads
-  required: boolean;
-  options?: string[];
-  multiple?: boolean;
-  maxFiles?: number;
-  maxSizeMB?: number;
-  description?: string;
-}
-
 
 interface Template {
   id: string;
@@ -43,17 +18,32 @@ interface Template {
   type: "free" | "premium";
   component_key: string;
   thumbnail_url: string;
-  form_fields: FormField[] | FormStep[];
+  form_fields: any[];
   category_id?: string;
   category_name?: string;
   sub_category_id?: string;
   sub_category_name?: string;
+  category_ids?: string[];
+  sub_category_ids?: string[];
+  categories?: { id: string; name: string; slug: string }[];
+  sub_categories?: { id: string; name: string; slug: string; category_id: string }[];
   is_active: boolean;
   tags: string[];
   preview_images: string[];
   preview_video_url?: string | null;
   price?: number;
   prices?: Record<string, number>;
+  original_price?: number | null;
+  original_prices?: Record<string, number> | null;
+  discount_percent?: number;
+  featured_position?: number | null;
+  admin_boost?: number;
+  meta_title?: string | null;
+  meta_description?: string | null;
+  og_image?: string | null;
+  meta_keywords?: string[];
+  canonical_url?: string | null;
+  noindex?: boolean;
 }
 
 interface TemplatesResponse {
@@ -61,132 +51,24 @@ interface TemplatesResponse {
   total: number;
 }
 
-interface CurrencyRate {
-  id: string;
-  currency: string;
-  label: string;
-  symbol: string;
-  rate: number;
-  is_active: boolean;
-}
-
-const COMMON_TAGS = [
-  "Birthday", "Wedding", "Anniversary", "Valentine", "Father's Day",
-  "Mother's Day", "Christmas", "New Year", "Party", "Corporate",
-  "Minimal", "Colorful", "Modern", "Classic", "Premium"
-];
-
 const Templates = () => {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const [categories, setCategories] = useState<any[]>([]);
-  const [selectedCategoryId, setSelectedCategoryId] = useState("");
-  const [selectedSubCategoryId, setSelectedSubCategoryId] = useState("");
 
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<"all" | "free" | "premium">("all");
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-
-  // Add template form state
-  const [newName, setNewName] = useState("");
-  const [newTemplateName, setNewTemplateName] = useState("");
-  const [newDescription, setNewDescription] = useState("");
-  const [newThumbnailUrl, setNewThumbnailUrl] = useState("");
-  const [newType, setNewType] = useState<"free" | "premium">("free");
-  const [newPrice, setNewPrice] = useState<number>(0);
-  const [newComponentName, setNewComponentName] = useState("");
-  const [newFields, setNewFields] = useState<FormStep[]>([
-    {
-      id: `step_1`,
-      title: "Step 1",
-      fields: [{ name: "name", label: "Name", type: "text", placeholder: "Enter name", required: true }]
-    }
-  ]);
-  const [newTags, setNewTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState("");
-  const [newIsActive, setNewIsActive] = useState(true);
-  const [newPreviewVideoUrl, setNewPreviewVideoUrl] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
-  // Holds the selected File locally — S3 upload deferred until Deploy
-  const [pendingThumbnailFile, setPendingThumbnailFile] = useState<File | null>(null);
-  const [localPreviewUrl, setLocalPreviewUrl] = useState<string>("");
-
-  // Gallery/Preview Images
-  const [newPreviewImages, setNewPreviewImages] = useState<string[]>([]);
-  const [pendingPreviewFiles, setPendingPreviewFiles] = useState<File[]>([]);
-  const [previewLocalUrls, setPreviewLocalUrls] = useState<string[]>([]);
 
   const { data, isLoading } = useQuery<TemplatesResponse>({
     queryKey: ["adminTemplates", search],
     queryFn: () => fetchApi(`/templates?search=${encodeURIComponent(search)}`),
   });
 
-  const { data: categoryData } = useQuery({
-    queryKey: ["categories"],
-    queryFn: () => fetchApi("/categories"),
-  });
-
-  const { data: subCategoriesData } = useQuery({
-    queryKey: ["sub-categories"],
-    queryFn: () => fetchApi("/sub-categories"),
-  });
-
-  const { data: ratesData } = useQuery({
-    queryKey: ["adminCurrencyRates"],
-    queryFn: () => fetchApi("/currency-rates"),
-  });
-
-  const currencyRates: CurrencyRate[] = ratesData?.rates || [];
-
-
   const templates = data?.rows || [];
 
-  const filtered = templates.filter(t => {
+  const filtered = templates.filter((t) => {
     const matchesType = filterType === "all" || t.type === filterType;
     return matchesType;
   });
-
-  // Store file locally; actual S3 upload happens on Deploy
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    // Revoke previous object URL to avoid memory leaks
-    if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
-    const preview = URL.createObjectURL(file);
-    setPendingThumbnailFile(file);
-    setLocalPreviewUrl(preview);
-    // Clear any previously saved CDN URL so preview shows the new file
-    setNewThumbnailUrl("");
-    // Reset file input so same file can be re-selected if needed
-    e.target.value = "";
-  };
-
-  const handlePreviewImagesSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
-
-    const newUrls = files.map(file => URL.createObjectURL(file));
-    setPendingPreviewFiles(prev => [...prev, ...files]);
-    setPreviewLocalUrls(prev => [...prev, ...newUrls]);
-    e.target.value = "";
-  };
-
-  const removePreviewImage = (index: number, isExisting: boolean) => {
-    if (isExisting) {
-      setNewPreviewImages(prev => prev.filter((_, i) => i !== index));
-    } else {
-      setPreviewLocalUrls(prev => {
-        const urlToRemove = prev[index];
-        if (urlToRemove && urlToRemove.startsWith('blob:')) {
-          URL.revokeObjectURL(urlToRemove);
-        }
-        return prev.filter((_, i) => i !== index);
-      });
-      setPendingPreviewFiles(prev => prev.filter((_, i) => i !== index));
-    }
-  };
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => fetchApi(`/templates/${id}`, { method: "DELETE" }),
@@ -195,724 +77,78 @@ const Templates = () => {
       toast.success("Template deleted successfully");
     },
     onError: () => toast.error("Failed to delete template"),
-    onSettled(data, error, variables, context) {
-      if (error) {
-        toast.error("Failed to delete template");
-      } else {
-        queryClient.invalidateQueries({ queryKey: ["adminTemplates"] });
-        toast.success("Template deleted successfully");
-      }
-    },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: string, payload: any }) => fetchApi(`/templates/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(payload)
-    }),
+    mutationFn: ({ id, payload }: { id: string; payload: any }) =>
+      fetchApi(`/templates/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminTemplates"] });
       toast.success("Template updated successfully");
-      resetAddForm();
     },
-    onError: (e: any) => toast.error(e.message || "Failed to update template")
-  });
-
-  const createMutation = useMutation({
-    mutationFn: (payload: any) => fetchApi(`/templates`, {
-      method: "POST",
-      body: JSON.stringify(payload)
-    }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["adminTemplates"] });
-      toast.success("Template created successfully");
-      resetAddForm();
-    },
-    onError: (e: any) => toast.error(e.message || "Failed to create template")
+    onError: (e: any) => toast.error(e.message || "Failed to update template"),
   });
 
   const deleteTemplate = (id: string) => {
-    if (window.confirm("Are you sure you want to decommission this template design unit? This action cannot be reversed.")) {
+    if (window.confirm("Are you sure you want to delete this design template? This action cannot be undone.")) {
       deleteMutation.mutate(id);
     }
-  };
-
-  const resetAddForm = () => {
-    setNewName("");
-    setNewTemplateName("");
-    setNewDescription("");
-    setNewType("free");
-    setNewPrice(0);
-    setNewComponentName("");
-    setNewTags([]);
-    setTagInput("");
-    setNewIsActive(true);
-    setNewPreviewVideoUrl("");
-    setNewFields([
-      {
-        id: `step_${Date.now()}`,
-        title: "Step 1",
-        fields: [{ name: "name", label: "Name", type: "text", placeholder: "Enter name", required: true }]
-      }
-    ]);
-    setSelectedCategoryId("");
-    setSelectedSubCategoryId("");
-    setNewThumbnailUrl("");
-    // Clear pending file + revoke local preview
-    setPendingThumbnailFile(null);
-    if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
-    setLocalPreviewUrl("");
-
-    setNewPreviewImages([]);
-    previewLocalUrls.forEach(url => URL.revokeObjectURL(url));
-    setPreviewLocalUrls([]);
-    setPendingPreviewFiles([]);
-
-    setShowAddForm(false);
-    setEditingId(null);
-  };
-
-  const toggleTag = (tag: string) => {
-    setNewTags(prev =>
-      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
-    );
-  };
-
-  const addCustomTag = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && tagInput.trim()) {
-      e.preventDefault();
-      const tag = tagInput.trim();
-      if (!newTags.includes(tag)) {
-        setNewTags([...newTags, tag]);
-      }
-      setTagInput("");
-    }
-  };
-
-  const submitTemplate = async () => {
-    // 1. Core Metadata Validation
-    const trimmedName = newName.trim();
-    const trimmedTemplateName = newTemplateName.trim();
-    const trimmedComponentKey = newComponentName.trim();
-    const slug = trimmedName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-
-    if (!trimmedName) {
-      toast.error("Template Name is required");
-      return;
-    }
-    if (!slug) {
-      toast.error("Template Name must contain alphanumeric characters (for URL slug)");
-      return;
-    }
-    if (!trimmedTemplateName) {
-      toast.error("Display Label is required");
-      return;
-    }
-    if (!trimmedComponentKey) {
-      toast.error("Component Key is required (e.g. BirthdayClassic)");
-      return;
-    }
-    if (!selectedSubCategoryId) {
-      toast.error("Please select a Category and Subcategory");
-      return;
-    }
-    if (!newThumbnailUrl && !pendingThumbnailFile) {
-      toast.error("Cover Thumbnail image is required");
-      return;
-    }
-    if (newType === "premium" && (!newPrice || newPrice <= 0)) {
-      toast.error("Premium template must have a price in INR (greater than 0)");
-      return;
-    }
-
-    // 2. Form Structure Validation (Steps & Slots)
-    if (newFields.length === 0) {
-      toast.error("At least one form step is required");
-      return;
-    }
-
-    for (let i = 0; i < newFields.length; i++) {
-      const step = newFields[i];
-      const stepTitle = step.title.trim();
-
-      if (!stepTitle) {
-        toast.error(`Step ${i + 1} is missing a title`);
-        return;
-      }
-      if (step.fields.length === 0) {
-        toast.error(`Step "${stepTitle}" must have at least one slot (field)`);
-        return;
-      }
-
-      for (let j = 0; j < step.fields.length; j++) {
-        const field = step.fields[j];
-        const fieldLabel = field.label.trim();
-        const fieldName = field.name.trim();
-
-        if (!fieldLabel) {
-          toast.error(`Slot ${j + 1} in step "${stepTitle}" is missing a label`);
-          return;
-        }
-        if (!fieldName) {
-          toast.error(`Slot "${fieldLabel}" in step "${stepTitle}" is missing a unique key (name)`);
-          return;
-        }
-
-        // Ensure name (key) is safe for JSON/DB keys
-        if (!/^[a-z0-9_]+$/i.test(fieldName)) {
-          toast.error(`Slot key "${fieldName}" in "${stepTitle}" must only contain letters, numbers, and underscores`);
-          return;
-        }
-
-        if (field.type === "select" && (!field.options || field.options.length === 0)) {
-          toast.error(`Select slot "${fieldLabel}" in "${stepTitle}" must have at least one option`);
-          return;
-        }
-      }
-    }
-
-    let thumbnailUrl = newThumbnailUrl.trim();
-
-    // Upload to S3 now (only on Deploy/Save)
-    if (pendingThumbnailFile) {
-      setIsUploading(true);
-      try {
-        thumbnailUrl = await uploadMedia(pendingThumbnailFile, MEDIA_FOLDERS.TEMPLATES);
-        setNewThumbnailUrl(thumbnailUrl);
-        setPendingThumbnailFile(null);
-      } catch (err: any) {
-        toast.error(err?.message || "Thumbnail upload failed");
-        setIsUploading(false);
-        return;
-      }
-      setIsUploading(false);
-    }
-
-    let previewImages = [...newPreviewImages];
-    if (pendingPreviewFiles.length > 0) {
-      setIsUploading(true);
-      try {
-        const uploadedUrls = await Promise.all(
-          pendingPreviewFiles.map(file => uploadMedia(file, MEDIA_FOLDERS.TEMPLATES))
-        );
-        previewImages = [...previewImages, ...uploadedUrls];
-        setPendingPreviewFiles([]);
-        setPreviewLocalUrls([]);
-      } catch (err: any) {
-        toast.error(err?.message || "Preview images upload failed");
-        setIsUploading(false);
-        return;
-      }
-      setIsUploading(false);
-    }
-
-    // 1. Process form fields: Upload any pending default images
-    const processedFields = await Promise.all(newFields.map(async (step) => {
-      const processedStepFields = await Promise.all(step.fields.map(async (field: any) => {
-        let defaultValue = field.defaultValue;
-
-        // Handle multiple files if present
-        if (field._files && field._files.length > 0) {
-          setIsUploading(true);
-          try {
-            // Get current URLs (which include blob: URLs from new selections)
-            const urls = field.multiple
-              ? (defaultValue?.startsWith('[') ? JSON.parse(defaultValue) : [defaultValue])
-              : [defaultValue];
-
-            // Upload all pending files
-            const destinationFolder = field.s3Folder || MEDIA_FOLDERS.TEMPLATES;
-            const uploadedPermUrls = await Promise.all(field._files.map(f => uploadMedia(f, destinationFolder)));
-
-            // Replace blob: URLs with permanent URLs in order
-            let uploadedIdx = 0;
-            const replacedUrls = urls.map((url: string) => {
-              if (typeof url === 'string' && url.startsWith('blob:') && uploadedIdx < uploadedPermUrls.length) {
-                return uploadedPermUrls[uploadedIdx++];
-              }
-              return url;
-            });
-
-            defaultValue = field.multiple ? JSON.stringify(replacedUrls) : replacedUrls[0];
-          } catch (err: any) {
-            toast.error(`Failed to upload default images for ${field.label}`);
-            throw err;
-          } finally {
-            setIsUploading(false);
-          }
-        }
-
-        // Return clean field object without internal _files property
-        const { _files, ...cleanField } = field;
-        return { ...cleanField, defaultValue };
-      }));
-      return { ...step, fields: processedStepFields };
-    })).catch((err) => {
-      console.error(err);
-      return null;
-    });
-
-    if (!processedFields) return; // Error occurred during upload
-
-    const payload = {
-      name: trimmedName,
-      templateName: trimmedTemplateName,
-      description: newDescription.trim(),
-      thumbnailUrl,
-      slug,
-      type: newType,
-      price: newType === "premium" ? Math.round(newPrice * 100) : 0,
-      componentKey: trimmedComponentKey,
-      formFields: processedFields,
-      subCategoryId: selectedSubCategoryId,
-      isActive: newIsActive,
-      tags: newTags,
-      previewImages,
-      previewVideoUrl: newPreviewVideoUrl.trim() || null,
-    };
-
-    if (editingId) {
-      updateMutation.mutate({ id: editingId, payload });
-    } else {
-      createMutation.mutate(payload);
-    }
-  };
-
-  const startEdit = (template: Template) => {
-    setEditingId(template.id);
-    setNewName(template.name);
-    setNewTemplateName(template.template_name || "");
-    setNewDescription(template.description || "");
-    setNewType(template.type);
-    setNewPrice((template.price || 0) / 100);
-    setNewComponentName(template.component_key);
-    let fieldsToEdit = template.form_fields || [];
-    if (fieldsToEdit.length > 0 && !('fields' in fieldsToEdit[0])) {
-      fieldsToEdit = [{
-        id: 'step_1',
-        title: 'Step 1',
-        fields: fieldsToEdit as any
-      }];
-    } else if (fieldsToEdit.length === 0) {
-      fieldsToEdit = [{
-        id: `step_${Date.now()}`,
-        title: "Step 1",
-        fields: []
-      }];
-    }
-    setNewFields(fieldsToEdit);
-    setNewThumbnailUrl(template.thumbnail_url || "");
-    setNewTags(template.tags || []);
-    setNewIsActive(template.is_active);
-    setSelectedCategoryId(template.category_id || "");
-    setSelectedSubCategoryId(template.sub_category_id || "");
-    setNewPreviewImages(template.preview_images || []);
-    setNewPreviewVideoUrl(template.preview_video_url || "");
-    setShowAddForm(true);
   };
 
   const toggleTemplateActive = (template: Template) => {
     updateMutation.mutate({
       id: template.id,
-      payload: { isActive: !template.is_active }
+      payload: { isActive: !template.is_active },
     });
   };
 
-  useEffect(() => {
-    if (categoryData) {
-      setCategories(categoryData.data || []);
-    }
-  }, [categoryData]);
-
   return (
     <DashboardLayout>
-      <div className="w-full">
+      <div className="w-full max-w-7xl mx-auto">
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
-          <div className="flex items-center gap-5">
-            <div className="w-16 h-16 rounded-3xl bg-primary/10 flex items-center justify-center border border-primary/20">
-              <Layout className="w-8 h-8 text-primary" />
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shadow-xs">
+              <Layout className="w-7 h-7" />
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-1">Catalog Control</p>
-              <h1 className="text-3xl font-black text-slate-900 tracking-tight">Wish Templates</h1>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-0.5">Catalog Control</p>
+              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Wish Templates</h1>
+              <p className="text-xs text-slate-500 font-medium">Manage and design your personalized interactive greeting templates</p>
             </div>
           </div>
+
           <button
-            onClick={() => setShowAddForm(true)}
-            className="flex items-center gap-3 px-6 py-4 rounded-2xl btn-primary text-white font-bold text-sm shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+            onClick={() => navigate("/templates/new")}
+            className="flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl btn-primary text-white font-bold text-xs sm:text-sm shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
           >
-            <Plus className="w-5 h-5" /> Add Design Template
+            <Plus className="w-4 h-4" /> Add Design Template
           </button>
         </div>
 
-        {/* Add/Edit Modal */}
-        <AnimatePresence>
-          {showAddForm && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4"
-              onClick={(e) => e.target === e.currentTarget && resetAddForm()}
-            >
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                className="w-full max-w-7xl max-h-[93vh] bg-white rounded-2xl shadow-2xl flex flex-col border border-slate-200 overflow-hidden"
-              >
-                {/* ── Sticky Header ── */}
-                <div className="flex items-center justify-between px-7 py-5 border-b border-slate-100 bg-white flex-shrink-0">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Layers className="w-4 h-4 text-primary" />
-                    </div>
-                    <div>
-                      <h2 className="text-base font-bold text-slate-800 leading-tight">{editingId ? 'Edit Template' : 'New Template'}</h2>
-                      <p className="text-[11px] text-slate-400">{editingId ? 'Update configuration below' : 'Fill in details to deploy a new design'}</p>
-                    </div>
-                  </div>
-                  <button onClick={resetAddForm} className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-all">
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-
-                {/* ── Two-Column Body ── */}
-                <div className="flex flex-col lg:flex-row flex-1 min-h-0 divide-y lg:divide-y-0 lg:divide-x divide-slate-100">
-
-                  {/* LEFT — Core config */}
-                  <div className="lg:w-[50%] overflow-y-auto custom-scrollbar p-7 space-y-5">
-
-                    {/* Tags Multi-select */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                        <Tag className="w-3 h-3" /> Tags (Select or type & enter)
-                      </label>
-                      <div className="flex flex-wrap gap-2 p-3.5 rounded-xl bg-slate-50 border border-slate-200 min-h-[50px]">
-                        {newTags.map(tag => (
-                          <Badge key={tag} className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/20 flex items-center gap-1.5 px-2.5 py-1 rounded-lg">
-                            {tag}
-                            <X className="w-3 h-3 cursor-pointer" onClick={() => toggleTag(tag)} />
-                          </Badge>
-                        ))}
-                        <input
-                          value={tagInput}
-                          onChange={e => setTagInput(e.target.value)}
-                          onKeyDown={addCustomTag}
-                          placeholder={newTags.length === 0 ? "Add tags..." : ""}
-                          className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-slate-600 min-w-[100px] placeholder:text-slate-300"
-                        />
-                      </div>
-                      <div className="flex flex-wrap gap-1.5 mt-2 overflow-x-auto pb-1 max-h-[80px]">
-                        {COMMON_TAGS.filter(t => !newTags.includes(t)).map(tag => (
-                          <button
-                            key={tag}
-                            onClick={() => toggleTag(tag)}
-                            className="px-2.5 py-1 rounded-lg border border-slate-200 text-[10px] font-bold text-slate-400 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all whitespace-nowrap"
-                          >
-                            + {tag}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Name + Template Name */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Template Name</label>
-                        <input
-                          value={newName}
-                          onChange={e => setNewName(e.target.value)}
-                          placeholder="e.g. birthday-pro"
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-primary/15 focus:border-primary/30 transition-all placeholder:font-normal placeholder:text-slate-300"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Display Label</label>
-                        <input
-                          value={newTemplateName}
-                          onChange={e => setNewTemplateName(e.target.value)}
-                          placeholder="e.g. Birthday Blast"
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-primary/15 focus:border-primary/30 transition-all placeholder:font-normal placeholder:text-slate-300"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Description */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Description</label>
-                      <textarea
-                        value={newDescription}
-                        onChange={e => setNewDescription(e.target.value)}
-                        placeholder="Brief description of this template..."
-                        rows={2}
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-600 outline-none focus:ring-2 focus:ring-primary/15 focus:border-primary/30 transition-all resize-none placeholder:text-slate-300"
-                      />
-                    </div>
-
-                    {/* Category + Subcategory */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Category</label>
-                        <Select value={selectedCategoryId} onValueChange={(v) => { setSelectedCategoryId(v); setSelectedSubCategoryId(""); }}>
-                          <SelectTrigger className="w-full h-10 px-3.5 rounded-xl bg-slate-50 border-slate-200 text-sm font-medium text-slate-700 outline-none">
-                            <SelectValue placeholder="Select category" />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-xl border-slate-200 shadow-xl">
-                            {categories.map(c => <SelectItem key={c.id} value={c.id} className="text-sm">{c.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Subcategory</label>
-                        <Select value={selectedSubCategoryId} onValueChange={setSelectedSubCategoryId} disabled={!selectedCategoryId}>
-                          <SelectTrigger className="w-full h-10 px-3.5 rounded-xl bg-slate-50 border-slate-200 text-sm font-medium text-slate-700 outline-none">
-                            <SelectValue placeholder="Select subcategory" />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-xl border-slate-200 shadow-xl">
-                            {subCategoriesData?.data?.filter((sc: any) => sc.category_id === selectedCategoryId).map((sc: any) => (
-                              <SelectItem key={sc.id} value={sc.id} className="text-sm">{sc.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    {/* Component Key + Access Type */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Component Key</label>
-                        <input
-                          value={newComponentName}
-                          onChange={e => setNewComponentName(e.target.value)}
-                          placeholder="e.g. BirthdayClassic"
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm font-mono font-bold text-slate-500 outline-none focus:ring-2 focus:ring-primary/15 focus:border-primary/30 transition-all placeholder:font-normal placeholder:text-slate-300"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Access Type</label>
-                        <div className="flex h-10 bg-slate-50 border border-slate-200 p-1 rounded-xl">
-                          {(["free", "premium"] as const).map(type => (
-                            <button
-                              key={type}
-                              onClick={() => setNewType(type)}
-                              className={`flex-1 rounded-lg text-xs font-bold uppercase transition-all ${newType === type ? "bg-white text-primary shadow-sm border border-slate-200" : "text-slate-400 hover:text-slate-600"}`}
-                            >
-                              {type}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Price Input & Auto-Conversion Preview (Only when Premium) */}
-                    {newType === "premium" && (
-                      <div className="space-y-2 p-4 bg-purple-50/50 rounded-xl border border-purple-100">
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-bold uppercase tracking-wider text-purple-900 flex items-center justify-between">
-                            <span>Price in INR (₹)</span>
-                            <span className="text-[9px] font-normal text-purple-600">Base Currency for auto-conversion</span>
-                          </label>
-                          <div className="relative">
-                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-purple-600">₹</span>
-                            <input
-                              type="number"
-                              min="1"
-                              step="1"
-                              value={newPrice || ""}
-                              onChange={e => setNewPrice(Math.max(0, parseFloat(e.target.value) || 0))}
-                              placeholder="e.g. 299"
-                              className="w-full pl-8 pr-3.5 py-2.5 rounded-xl bg-white border border-purple-200 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-purple-400/20 focus:border-purple-400 transition-all placeholder:font-normal placeholder:text-slate-300"
-                            />
-                          </div>
-                        </div>
-
-                        {newPrice > 0 && (
-                          <div className="pt-2 border-t border-purple-100/80">
-                            <p className="text-[9px] font-bold uppercase tracking-wider text-purple-700 mb-1.5">
-                              Auto-Converted Global Prices:
-                            </p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {currencyRates
-                                .filter(r => r.currency !== "INR" && r.is_active)
-                                .map(r => (
-                                  <span
-                                    key={r.currency}
-                                    className="text-[10px] bg-white px-2 py-0.5 rounded-md border border-purple-200 font-semibold text-purple-900 shadow-xs"
-                                  >
-                                    {r.symbol}{(newPrice * r.rate).toFixed(2)} <span className="text-[8px] font-bold text-purple-500">{r.currency}</span>
-                                  </span>
-                                ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-
-                    {/* Visibility Toggle */}
-                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-700">Public Visibility</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">Show this template on the marketplace</p>
-                      </div>
-                      <Switch checked={newIsActive} onCheckedChange={setNewIsActive} />
-                    </div>
-                  </div>
-
-                  {/* RIGHT — Thumbnail + Form Fields */}
-                  <div className="lg:flex-1 overflow-y-auto custom-scrollbar p-7 space-y-6 bg-slate-50/50">
-
-                    {/* Thumbnail */}
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Cover Thumbnail</label>
-                      <div
-                        onClick={() => fileInputRef.current?.click()}
-                        className="group relative cursor-pointer rounded-xl overflow-hidden bg-white border-2 border-dashed border-slate-200 hover:border-primary/40 transition-all flex items-center justify-center"
-                        style={{ height: '160px' }}
-                      >
-                        {/* Show local preview (pending file) or existing CDN URL */}
-                        {(localPreviewUrl || newThumbnailUrl) ? (
-                          <>
-                            <img src={localPreviewUrl || newThumbnailUrl} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt="Preview" />
-                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center text-white backdrop-blur-sm">
-                              <Upload className="w-6 h-6 mb-1" />
-                              <span className="text-xs font-bold">Replace Image</span>
-                            </div>
-                          </>
-                        ) : (
-                          <div className="text-center">
-                            <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center mx-auto mb-2">
-                              <Upload className="w-5 h-5 text-slate-400" />
-                            </div>
-                            <p className="text-sm font-semibold text-slate-500">Click to upload</p>
-                            <p className="text-[10px] text-slate-400 mt-0.5">PNG, JPG up to 5MB</p>
-                          </div>
-                        )}
-                        <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" accept="image/*" />
-                      </div>
-                    </div>
-
-                    {/* Preview Images Gallery */}
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
-                        Gallery Preview Images
-                        <span className="text-[9px] font-normal lowercase">Multiple screenshots for user preview</span>
-                      </label>
-                      <div className="grid grid-cols-4 gap-3">
-                        {/* Existing/Pending Images */}
-                        {[...newPreviewImages, ...previewLocalUrls].map((url, idx) => {
-                          const isExisting = idx < newPreviewImages.length;
-                          return (
-                            <div key={url} className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 group/gal">
-                              <img src={url} className="w-full h-full object-cover" alt={`Preview ${idx}`} />
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  console.log("Removing image at index:", isExisting ? idx : idx - newPreviewImages.length, "isExisting:", isExisting);
-                                  removePreviewImage(isExisting ? idx : idx - newPreviewImages.length, isExisting);
-                                }}
-                                className="absolute top-1.5 right-1.5 p-1.5 bg-rose-500 text-white rounded-lg opacity-0 group-hover/gal:opacity-100 transition-all shadow-lg scale-75 group-hover:scale-100 z-10 cursor-pointer"
-                              >
-                                <X className="w-3 h-3 pointer-events-none" />
-                              </button>
-                              {!isExisting && (
-                                <div className="absolute inset-0 bg-primary/10 flex items-center justify-center">
-                                  <div className="bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded text-[8px] font-black text-primary uppercase shadow-sm">Pending</div>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-
-                        {/* Add Button */}
-                        <label className="aspect-square cursor-pointer rounded-xl border-2 border-dashed border-slate-200 hover:border-primary/40 hover:bg-primary/5 transition-all flex flex-col items-center justify-center text-slate-300 hover:text-primary group">
-                          <Plus className="w-6 h-6 mb-1 transition-transform group-hover:scale-110" />
-                          <span className="text-[9px] font-bold uppercase">Add Photo</span>
-                          <input
-                            type="file"
-                            multiple
-                            accept="image/*"
-                            className="hidden"
-                            onChange={handlePreviewImagesSelect}
-                          />
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* Preview Video URL */}
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                        <Globe className="w-3 h-3" /> Preview Video URL
-                        <span className="text-[9px] font-normal lowercase text-slate-300 ml-1">(YouTube link)</span>
-                      </label>
-                      <input
-                        value={newPreviewVideoUrl}
-                        onChange={e => setNewPreviewVideoUrl(e.target.value)}
-                        placeholder="https://www.youtube.com/watch?v=..."
-                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-600 outline-none focus:ring-2 focus:ring-primary/15 focus:border-primary/30 transition-all placeholder:text-slate-300"
-                      />
-                    </div>
-
-                    {/* Form Builder */}
-                    <FormBuilder steps={newFields} onChange={setNewFields} />
-                  </div>
-                </div>
-
-                {/* ── Sticky Footer ── */}
-                <div className="flex items-center justify-between px-7 py-4 border-t border-slate-100 bg-white flex-shrink-0">
-                  <p className="text-[11px] text-slate-400">
-                    {newFields.length} form step{newFields.length !== 1 ? 's' : ''} configured
-                  </p>
-                  <div className="flex gap-3">
-                    <button onClick={resetAddForm} className="px-5 py-2 rounded-lg border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-all">
-                      Cancel
-                    </button>
-                    <button
-                      onClick={submitTemplate}
-                      disabled={createMutation.isPending || updateMutation.isPending || isUploading}
-                      className="px-7 py-2 rounded-lg btn-primary text-white font-bold text-sm shadow-md shadow-primary/20 hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-2"
-                    >
-                      {isUploading ? (
-                        <><RefreshCw className="w-4 h-4 animate-spin" /> Uploading...</>
-                      ) : createMutation.isPending || updateMutation.isPending ? (
-                        <><RefreshCw className="w-4 h-4 animate-spin" /> Saving...</>
-                      ) : editingId ? (
-                        <><Check className="w-4 h-4" /> Save Changes</>
-                      ) : (
-                        <><Zap className="w-4 h-4" /> Deploy Template</>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Search & Statistics */}
-        <div className="flex flex-col md:flex-row gap-4 mb-8">
+        {/* Search & Statistics Filter Bar */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-8">
           <div className="flex-1 relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-primary transition-colors" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-primary transition-colors" />
             <input
               value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search templates..."
-              className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-white border border-slate-200 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/5 transition-all shadow-sm"
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search templates by name, title, or category..."
+              className="w-full pl-11 pr-4 py-2.5 rounded-2xl bg-white border border-slate-200 text-xs sm:text-sm font-medium outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary/40 transition-all shadow-xs"
             />
           </div>
 
-          <div className="flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
-            {(["all", "free", "premium"] as const).map(type => (
+          <div className="flex bg-white p-1 rounded-2xl border border-slate-200 shadow-xs">
+            {(["all", "free", "premium"] as const).map((type) => (
               <button
                 key={type}
                 onClick={() => setFilterType(type)}
-                className={`px-6 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${filterType === type
-                  ? "bg-primary text-white shadow-sm"
-                  : "text-slate-400 hover:text-slate-600"
-                  }`}
+                className={`px-5 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${
+                  filterType === type ? "bg-primary text-white shadow-xs" : "text-slate-400 hover:text-slate-700"
+                }`}
               >
                 {type}
               </button>
@@ -921,77 +157,142 @@ const Templates = () => {
         </div>
 
         {/* Template Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
           {filtered.map((template, i) => (
             <motion.div
               key={template.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.02 }}
-              className={`group bg-white rounded-xl overflow-hidden border border-slate-200 transition-all hover:shadow-xl hover:border-primary/20 ${!template.is_active ? 'grayscale opacity-60' : ''}`}
+              className={`group bg-white rounded-2xl overflow-hidden border border-slate-200 transition-all hover:shadow-xl hover:border-primary/30 flex flex-col ${
+                !template.is_active ? "grayscale opacity-60" : ""
+              }`}
             >
               {/* Thumbnail */}
               <div className="aspect-[4/3] relative overflow-hidden bg-slate-100">
-                <img src={template.thumbnail_url} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt={template.name} />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                {template.thumbnail_url ? (
+                  <img
+                    src={template.thumbnail_url}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    alt={template.name}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-300">
+                    <Sparkles className="w-8 h-8" />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
-                <div className="absolute top-3 left-3 right-3 flex items-start justify-between">
-                  <div className="flex flex-col gap-1.5">
+                <div className="absolute top-2.5 left-2.5 right-2.5 flex items-start justify-between">
+                  <div className="flex flex-col gap-1">
                     {template.type === "premium" && (
-                      <div className="bg-amber-400 text-black px-2 py-0.5 rounded-md text-[8px] font-bold uppercase flex items-center w-fit">
+                      <div className="bg-amber-400 text-black px-2 py-0.5 rounded-md text-[8px] font-black uppercase flex items-center w-fit shadow-xs">
                         <Crown className="w-2.5 h-2.5 mr-1" /> Premium
                       </div>
                     )}
-                    <div className="bg-slate-900/60 text-white backdrop-blur-sm px-2 py-0.5 rounded-md text-[8px] font-bold uppercase w-fit">
-                      {template.sub_category_name || "Misc"}
+                    {template.featured_position && (
+                      <div className="bg-purple-600 text-white px-2 py-0.5 rounded-md text-[8px] font-black uppercase flex items-center w-fit shadow-xs">
+                        <Sparkles className="w-2.5 h-2.5 mr-1" /> Pin #{template.featured_position}
+                      </div>
+                    )}
+                    {template.admin_boost > 0 && !template.featured_position && (
+                      <div className="bg-indigo-600 text-white px-2 py-0.5 rounded-md text-[8px] font-black uppercase flex items-center w-fit shadow-xs">
+                        <Zap className="w-2.5 h-2.5 mr-1" /> +{template.admin_boost} Boost
+                      </div>
+                    )}
+                    <div className="bg-slate-900/70 text-white backdrop-blur-xs px-2 py-0.5 rounded-md text-[8px] font-bold uppercase w-fit">
+                      {template.sub_categories && template.sub_categories.length > 1
+                        ? `${template.sub_categories[0].name} +${template.sub_categories.length - 1}`
+                        : template.sub_category_name || "Misc"}
                     </div>
+                    {template.meta_title ? (
+                      <div className="bg-emerald-600 text-white px-2 py-0.5 rounded-md text-[8px] font-black uppercase flex items-center w-fit shadow-xs">
+                        <Globe className="w-2.5 h-2.5 mr-1" /> SEO Ready
+                      </div>
+                    ) : (
+                      <div className="bg-slate-900/60 text-slate-300 backdrop-blur-xs px-2 py-0.5 rounded-md text-[8px] font-medium flex items-center w-fit">
+                        <Globe className="w-2.5 h-2.5 mr-1 opacity-70" /> Default SEO
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 <div className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none group-hover:pointer-events-auto">
-                  <button onClick={() => startEdit(template)} className="p-2 rounded-lg bg-white shadow-lg text-slate-800 hover:bg-primary hover:text-white transition-all scale-90 group-hover:scale-100">
+                  <button
+                    onClick={() => navigate(`/templates/edit/${template.id}`)}
+                    className="p-2.5 rounded-xl bg-white shadow-lg text-slate-800 hover:bg-primary hover:text-white transition-all scale-90 group-hover:scale-100 cursor-pointer"
+                    title="Edit Template"
+                  >
                     <Edit2 className="w-4 h-4" />
                   </button>
-                  <button onClick={() => deleteTemplate(template.id)} className="p-2 rounded-lg bg-white shadow-lg text-rose-500 hover:bg-rose-500 hover:text-white transition-all scale-90 group-hover:scale-100">
+                  <button
+                    onClick={() => deleteTemplate(template.id)}
+                    className="p-2.5 rounded-xl bg-white shadow-lg text-rose-500 hover:bg-rose-500 hover:text-white transition-all scale-90 group-hover:scale-100 cursor-pointer"
+                    title="Delete Template"
+                  >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
-              <div className="p-4 space-y-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-bold text-slate-800 truncate leading-tight mb-1">{template.name}</h3>
-                    <p className="text-[10px] text-slate-400 font-medium truncate">{template.template_name}</p>
+              {/* Card Details */}
+              <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-xs font-bold text-slate-800 truncate leading-tight mb-0.5">
+                        {template.template_name || template.name}
+                      </h3>
+                      <p className="text-[10px] text-slate-400 font-mono truncate">{template.name}</p>
+                    </div>
+                    <Switch
+                      className="scale-75 origin-right"
+                      checked={template.is_active}
+                      onCheckedChange={() => toggleTemplateActive(template)}
+                    />
                   </div>
-                  <Switch
-                    className="scale-75 origin-right"
-                    checked={template.is_active}
-                    onCheckedChange={() => toggleTemplateActive(template)}
-                  />
                 </div>
 
-                <div className="flex items-center justify-between pt-3 border-t border-slate-50">
-                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                <div className="flex items-center justify-between pt-2.5 border-t border-slate-100">
+                  <div className="flex items-center gap-1 flex-1 min-w-0">
                     <div className="flex flex-wrap gap-1">
                       {(template.tags || []).slice(0, 2).map((tag, idx) => (
-                        <span key={idx} className="text-[8px] px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500 font-bold border border-slate-200">
+                        <span
+                          key={idx}
+                          className="text-[8px] px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500 font-bold border border-slate-200/60 truncate"
+                        >
                           {tag}
                         </span>
                       ))}
-                      {template.tags?.length > 2 && <span className="text-[8px] text-slate-300">+{template.tags.length - 2}</span>}
+                      {template.tags?.length > 2 && (
+                        <span className="text-[8px] text-slate-300 font-semibold">+{template.tags.length - 2}</span>
+                      )}
                     </div>
                   </div>
 
                   <div className="flex items-center gap-1 shrink-0">
                     {template.type === "free" ? (
-                      <span className="text-[9px] font-black text-emerald-500 uppercase">Free</span>
-                    ) : template.price && template.price > 0 ? (
-                      <span className="text-[9px] font-black text-purple-600 uppercase bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200">
-                        ₹{(template.price / 100).toLocaleString("en-IN")}
+                      <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-200">
+                        Free
                       </span>
+                    ) : template.price && template.price > 0 ? (
+                      <div className="flex items-center gap-1">
+                        {template.original_price && template.original_price > template.price && (
+                          <span className="text-[9px] font-bold text-slate-400 line-through">
+                            ₹{(template.original_price / 100).toLocaleString("en-IN")}
+                          </span>
+                        )}
+                        <span className="text-[9px] font-black text-purple-700 uppercase bg-purple-50 px-1.5 py-0.5 rounded-md border border-purple-200">
+                          ₹{(template.price / 100).toLocaleString("en-IN")}
+                        </span>
+                        {template.original_price && template.original_price > template.price && (
+                          <span className="text-[9px] font-black text-rose-600 bg-rose-50 px-1 py-0.5 rounded border border-rose-200">
+                            -{template.discount_percent ?? Math.round(((template.original_price - template.price) / template.original_price) * 100)}%
+                          </span>
+                        )}
+                      </div>
                     ) : (
-                      <span className="text-[9px] font-black text-amber-500 uppercase bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                      <span className="text-[9px] font-black text-amber-600 uppercase bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200">
                         No Price
                       </span>
                     )}
@@ -1004,10 +305,20 @@ const Templates = () => {
 
         {/* Empty State */}
         {filtered.length === 0 && !isLoading && (
-          <div className="min-h-[400px] flex flex-col items-center justify-center p-12 border-4 border-dashed border-slate-100 rounded-[4rem] opacity-40 grayscale">
-            <Box className="w-16 h-16 text-slate-200 mb-6" />
-            <h3 className="section-header text-2xl">Vault Empty</h3>
-            <p className="text-sm font-bold text-slate-400 max-w-sm text-center mt-3 uppercase tracking-widest italic leaging-relaxed">Deploy your first design template to start populating your catalog.</p>
+          <div className="min-h-[350px] flex flex-col items-center justify-center p-12 border-2 border-dashed border-slate-200 rounded-3xl bg-white">
+            <Box className="w-12 h-12 text-slate-300 mb-4" />
+            <h3 className="text-base font-bold text-slate-700">No Templates Found</h3>
+            <p className="text-xs text-slate-400 text-center max-w-sm mt-1 mb-5">
+              {search
+                ? `No templates matching "${search}". Try clearing your search.`
+                : "Create and publish your first wish template to populate your marketplace."}
+            </p>
+            <button
+              onClick={() => navigate("/templates/new")}
+              className="px-5 py-2.5 rounded-xl btn-primary text-white font-bold text-xs shadow-md"
+            >
+              + Create Template
+            </button>
           </div>
         )}
       </div>

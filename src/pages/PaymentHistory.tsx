@@ -14,6 +14,7 @@ import {
   RefreshCw,
   Copy,
   ExternalLink,
+  RotateCcw,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
@@ -28,8 +29,12 @@ interface PaymentRecord {
   amount: number;
   currency: string;
   amount_inr: number;
-  status: "created" | "paid" | "failed";
+  status: "created" | "paid" | "failed" | "refunded";
   wish_id: string | null;
+  razorpay_refund_id?: string | null;
+  refund_amount?: number | null;
+  refund_reason?: string | null;
+  refunded_at?: string | null;
   created_at: string;
   updated_at: string;
   user_email: string | null;
@@ -48,6 +53,7 @@ interface PaymentsResponse {
     paid_count: string;
     failed_count: string;
     pending_count: string;
+    refunded_count?: string;
   };
 }
 
@@ -75,12 +81,13 @@ function formatInr(paise: number | string): string {
 }
 
 const STATUS_META = {
-  paid:    { label: "Paid",    bg: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500", Icon: CheckCircle2 },
-  failed:  { label: "Failed",  bg: "bg-red-50 text-red-700 border-red-200",             dot: "bg-red-500",     Icon: XCircle },
-  created: { label: "Pending", bg: "bg-amber-50 text-amber-700 border-amber-200",        dot: "bg-amber-500",   Icon: Clock },
+  paid:     { label: "Paid",     bg: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500", Icon: CheckCircle2 },
+  failed:   { label: "Failed",   bg: "bg-red-50 text-red-700 border-red-200",             dot: "bg-red-500",     Icon: XCircle },
+  created:  { label: "Pending",  bg: "bg-amber-50 text-amber-700 border-amber-200",        dot: "bg-amber-500",   Icon: Clock },
+  refunded: { label: "Refunded", bg: "bg-purple-50 text-purple-700 border-purple-200",    dot: "bg-purple-500",  Icon: RotateCcw },
 } as const;
 
-function StatusBadge({ status }: { status: "paid" | "failed" | "created" }) {
+function StatusBadge({ status }: { status: "paid" | "failed" | "created" | "refunded" }) {
   const meta = STATUS_META[status] ?? STATUS_META.created;
   return (
     <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${meta.bg}`}>
@@ -122,7 +129,7 @@ function StatCard({
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
-const STATUS_OPTIONS = ["all", "paid", "failed", "created"] as const;
+const STATUS_OPTIONS = ["all", "paid", "refunded", "failed", "created"] as const;
 
 const PaymentHistory = () => {
   const [search, setSearch] = useState("");

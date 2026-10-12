@@ -85,6 +85,15 @@ const TrendingTemplates = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
+    const allowedExts = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
+    const allowedMimes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    if (!allowedExts.includes(ext) && !allowedMimes.includes(file.type.toLowerCase())) {
+      toast.error("Please upload a JPG, PNG, WEBP, or GIF image.");
+      e.target.value = "";
+      return;
+    }
+
     if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
     const preview = URL.createObjectURL(file);
     setPendingFile(file);
@@ -498,7 +507,7 @@ const TrendingTemplates = () => {
                           <p className="text-[10px] text-slate-400 mt-0.5">PNG, JPG up to 5MB</p>
                         </div>
                       )}
-                      <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" accept="image/*" />
+                      <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif" />
                     </div>
                   </div>
                 </div>

@@ -451,13 +451,28 @@ const S3MusicManager = () => {
                          onClick={() => thumbInputRef.current?.click()}
                          className={`relative h-24 rounded-2xl border-2 border-dashed flex items-center justify-center cursor-pointer transition-all ${uploadThumb ? 'border-primary bg-primary/5' : 'border-slate-200 hover:border-primary/40 hover:bg-slate-50'}`}
                        >
-                         <input 
-                           type="file" 
-                           ref={thumbInputRef}
-                           className="hidden" 
-                           accept="image/*"
-                           onChange={(e) => setUploadThumb(e.target.files?.[0] || null)}
-                         />
+                          <input 
+                            type="file" 
+                            ref={thumbInputRef}
+                            className="hidden" 
+                            accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) {
+                                setUploadThumb(null);
+                                return;
+                              }
+                              const ext = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+                              const allowedExts = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+                              const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+                              if (!allowedExts.includes(ext) && !allowedMimes.includes(file.type.toLowerCase())) {
+                                toast.error("Please upload a JPG, PNG, WEBP, or GIF image.");
+                                if (thumbInputRef.current) thumbInputRef.current.value = "";
+                                return;
+                              }
+                              setUploadThumb(file);
+                            }}
+                          />
                          {uploadThumb ? (
                            <div className="flex items-center gap-3 px-4">
                              <img src={URL.createObjectURL(uploadThumb)} className="w-12 h-12 rounded-lg object-cover border border-white shadow-sm" />

@@ -15,12 +15,14 @@ import {
   Coins,
   CreditCard,
   Database,
+  Trophy,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const navItems = [
   { icon: Home, label: "Home", path: "/" },
   { icon: BarChart, label: "Analytics", path: "/analytics" },
+  { icon: Trophy, label: "Rankings", path: "/rankings" },
   { icon: Layers, label: "Categories", path: "/categories" },
   { icon: LayoutGrid, label: "Templates", path: "/templates" },
   { icon: Flame, label: "Trending", path: "/trending-templates" },
