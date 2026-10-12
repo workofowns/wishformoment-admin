@@ -1,3 +1,5 @@
+import { optimizeImage } from "./imageOptimizer";
+
 export const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
 export const API_BASE_URL = `${API_BASE}/admin`;
 export const MEDIA_BASE_URL = API_BASE; // /media is not under /admin
@@ -91,8 +93,11 @@ export const resolveMimeType = (file: File): string => {
  * @returns       The public CloudFront URL of the uploaded asset.
  */
 export const uploadMedia = async (file: File, folder: MediaFolder): Promise<string> => {
+  // ── Smart client-side image optimization before presign & S3 PUT ────────────
+  const fileToUpload = await optimizeImage(file);
+
   const token = localStorage.getItem("adminToken");
-  const contentType = resolveMimeType(file);
+  const contentType = fileToUpload.type || resolveMimeType(fileToUpload);
 
   // ── Step 1: Ask backend for a presigned S3 PUT URL ──────────────────────────
   const presignRes = await fetch(`${MEDIA_BASE_URL}/media/presign`, {
@@ -103,7 +108,7 @@ export const uploadMedia = async (file: File, folder: MediaFolder): Promise<stri
     },
     body: JSON.stringify({
       folder,
-      filename: file.name,
+      filename: fileToUpload.name,
       contentType,
     }),
   });
@@ -119,7 +124,7 @@ export const uploadMedia = async (file: File, folder: MediaFolder): Promise<stri
   const s3Res = await fetch(uploadUrl, {
     method: "PUT",
     headers: { "Content-Type": contentType },
-    body: file,
+    body: fileToUpload,
   });
 
   if (!s3Res.ok) throw new Error(`S3 upload failed: ${s3Res.status} ${s3Res.statusText}`);
