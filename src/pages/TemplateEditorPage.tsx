@@ -8,7 +8,7 @@ import {
   ArrowLeft, Check, Crown, Globe, Image, Layout, Layers, Plus, RefreshCw,
   Sparkles, Tag, Trash2, Upload, X, Zap, Code, ShieldCheck, Eye, EyeOff,
   Folder, FolderCheck, CheckSquare, Square, Search, Share2, ExternalLink,
-  Link as LinkIcon, HelpCircle, Copy, SlidersHorizontal, Music, FileAudio, AlertCircle
+  Link as LinkIcon, HelpCircle, Copy, SlidersHorizontal, Music, FileAudio, AlertCircle, Percent
 } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
@@ -94,6 +94,11 @@ export default function TemplateEditorPage() {
   const [componentKey, setComponentKey] = useState("");
   const [type, setType] = useState<"free" | "premium">("free");
   const [price, setPrice] = useState<number>(0);
+  const [hasDiscount, setHasDiscount] = useState<boolean>(false);
+  const [originalPrice, setOriginalPrice] = useState<number>(0);
+  const [discountMode, setDiscountMode] = useState<"percentage" | "amount">("percentage");
+  const [discountPercent, setDiscountPercent] = useState<number>(0);
+  const [discountAmount, setDiscountAmount] = useState<number>(0);
   const [isActive, setIsActive] = useState(true);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
@@ -263,7 +268,23 @@ export default function TemplateEditorPage() {
       setTemplateName(templateData.template_name || "");
       setDescription(templateData.description || "");
       setType(templateData.type || "free");
-      setPrice(templateData.price ? templateData.price / 100 : 0);
+      const sellingRupees = templateData.price ? templateData.price / 100 : 0;
+      setPrice(sellingRupees);
+
+      const origPaise = templateData.original_price ?? templateData.originalPrice;
+      const origRupees = origPaise ? origPaise / 100 : 0;
+      if (origRupees > sellingRupees) {
+        setHasDiscount(true);
+        setOriginalPrice(origRupees);
+        const diff = origRupees - sellingRupees;
+        setDiscountAmount(diff);
+        setDiscountPercent(Math.round((diff / origRupees) * 100));
+      } else {
+        setHasDiscount(false);
+        setOriginalPrice(0);
+        setDiscountAmount(0);
+        setDiscountPercent(0);
+      }
       setComponentKey(templateData.component_key || "");
       setThumbnailUrl(templateData.thumbnail_url || "");
       setTags(templateData.tags || []);
@@ -695,6 +716,10 @@ export default function TemplateEditorPage() {
       toast.error("Premium template must have a valid price in INR (> 0)");
       return;
     }
+    if (type === "premium" && hasDiscount && (!originalPrice || originalPrice <= price)) {
+      toast.error("Original (MRP) price must be strictly greater than the selling price");
+      return;
+    }
 
     if (steps.length === 0) {
       toast.error("At least one form step is required");
@@ -933,6 +958,8 @@ export default function TemplateEditorPage() {
       sub_category_id: selectedSubCategoryIds[0],
       type,
       price: type === "premium" ? Math.round(price * 100) : 0,
+      originalPrice: type === "premium" && hasDiscount && originalPrice > price ? Math.round(originalPrice * 100) : null,
+      original_price: type === "premium" && hasDiscount && originalPrice > price ? Math.round(originalPrice * 100) : null,
       componentKey: trimmedComponentKey,
       component_key: trimmedComponentKey,
       tags,
@@ -2136,10 +2163,14 @@ export default function TemplateEditorPage() {
 
               {type === "premium" ? (
                 <div className="space-y-4">
+                  {/* Selling Price */}
                   <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                      Base Price in INR (₹) *
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                        Selling / Final Price in INR (₹) *
+                      </label>
+                      <span className="text-[10px] text-slate-400 font-medium">Customer pays this amount</span>
+                    </div>
                     <div className="relative">
                       <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">₹</span>
                       <input
@@ -2147,11 +2178,244 @@ export default function TemplateEditorPage() {
                         min="1"
                         step="1"
                         value={price || ""}
-                        onChange={(e) => setPrice(Number(e.target.value))}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setPrice(val);
+                          if (hasDiscount && originalPrice > val && val > 0) {
+                            const diff = originalPrice - val;
+                            setDiscountAmount(diff);
+                            setDiscountPercent(Math.round((diff / originalPrice) * 100));
+                          }
+                        }}
                         placeholder="299"
                         className="w-full pl-8 pr-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-primary/15 focus:border-primary/40 transition-all placeholder:text-slate-300"
                       />
                     </div>
+                  </div>
+
+                  {/* Discount Pricing Section */}
+                  <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50/50 via-purple-50/30 to-slate-50 border border-purple-100/80 space-y-3.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-purple-100 flex items-center justify-center text-purple-700">
+                          <Percent className="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-800">Discount & Sale Pricing</p>
+                          <p className="text-[10px] text-slate-500">Show strikethrough original price & discount tag</p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={hasDiscount}
+                        onCheckedChange={(checked) => {
+                          setHasDiscount(checked);
+                          if (checked) {
+                            if (!originalPrice || originalPrice <= price) {
+                              const suggestedOriginal = price > 0 ? Math.round(price * 1.35) : 399;
+                              setOriginalPrice(suggestedOriginal);
+                              if (price > 0) {
+                                const diff = suggestedOriginal - price;
+                                setDiscountAmount(diff);
+                                setDiscountPercent(Math.round((diff / suggestedOriginal) * 100));
+                              }
+                            }
+                          } else {
+                            setOriginalPrice(0);
+                            setDiscountAmount(0);
+                            setDiscountPercent(0);
+                          }
+                        }}
+                      />
+                    </div>
+
+                    {hasDiscount && (
+                      <div className="pt-2 border-t border-purple-100/60 space-y-3">
+                        {/* Original / MRP Price */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                              Original / MRP Price (₹) *
+                            </label>
+                            <span className="text-[10px] text-slate-400">Displayed with strikethrough</span>
+                          </div>
+                          <div className="relative">
+                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">₹</span>
+                            <input
+                              type="number"
+                              min="1"
+                              step="1"
+                              value={originalPrice || ""}
+                              onChange={(e) => {
+                                const val = Number(e.target.value);
+                                setOriginalPrice(val);
+                                if (val > 0) {
+                                  if (discountMode === "percentage" && discountPercent > 0) {
+                                    const newSelling = Math.max(1, Math.round(val * (1 - discountPercent / 100)));
+                                    setPrice(newSelling);
+                                    setDiscountAmount(val - newSelling);
+                                  } else if (discountMode === "amount" && discountAmount > 0) {
+                                    const newSelling = Math.max(1, val - discountAmount);
+                                    setPrice(newSelling);
+                                    setDiscountPercent(Math.round((discountAmount / val) * 100));
+                                  } else if (price > 0 && val > price) {
+                                    const diff = val - price;
+                                    setDiscountAmount(diff);
+                                    setDiscountPercent(Math.round((diff / val) * 100));
+                                  }
+                                }
+                              }}
+                              placeholder="499"
+                              className="w-full pl-8 pr-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-primary/15 focus:border-primary/40 transition-all placeholder:text-slate-300"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Discount Adjustment Mode */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                              Calculate Discount By
+                            </span>
+                            <div className="flex items-center rounded-lg bg-slate-200/70 p-0.5 text-[11px] font-bold">
+                              <button
+                                type="button"
+                                onClick={() => setDiscountMode("percentage")}
+                                className={`px-2 py-1 rounded-md transition-all ${
+                                  discountMode === "percentage"
+                                    ? "bg-white text-purple-700 shadow-sm"
+                                    : "text-slate-600 hover:text-slate-900"
+                                }`}
+                              >
+                                % Percentage
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setDiscountMode("amount")}
+                                className={`px-2 py-1 rounded-md transition-all ${
+                                  discountMode === "amount"
+                                    ? "bg-white text-purple-700 shadow-sm"
+                                    : "text-slate-600 hover:text-slate-900"
+                                }`}
+                              >
+                                ₹ Flat Amount
+                              </button>
+                            </div>
+                          </div>
+
+                          {discountMode === "percentage" ? (
+                            <div className="relative">
+                              <input
+                                type="number"
+                                min="1"
+                                max="99"
+                                value={discountPercent || ""}
+                                onChange={(e) => {
+                                  const pct = Math.min(99, Math.max(1, Number(e.target.value)));
+                                  setDiscountPercent(pct);
+                                  if (originalPrice > 0) {
+                                    const newSelling = Math.max(1, Math.round(originalPrice * (1 - pct / 100)));
+                                    setPrice(newSelling);
+                                    setDiscountAmount(originalPrice - newSelling);
+                                  }
+                                }}
+                                placeholder="35"
+                                className="w-full pl-3.5 pr-8 py-2 rounded-xl bg-white border border-slate-200 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-primary/15 focus:border-primary/40 transition-all placeholder:text-slate-300"
+                              />
+                              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">%</span>
+                            </div>
+                          ) : (
+                            <div className="relative">
+                              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">₹</span>
+                              <input
+                                type="number"
+                                min="1"
+                                value={discountAmount || ""}
+                                onChange={(e) => {
+                                  const amt = Number(e.target.value);
+                                  setDiscountAmount(amt);
+                                  if (originalPrice > 0 && amt > 0 && amt < originalPrice) {
+                                    const newSelling = Math.max(1, originalPrice - amt);
+                                    setPrice(newSelling);
+                                    setDiscountPercent(Math.round((amt / originalPrice) * 100));
+                                  }
+                                }}
+                                placeholder="150"
+                                className="w-full pl-8 pr-3.5 py-2 rounded-xl bg-white border border-slate-200 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-primary/15 focus:border-primary/40 transition-all placeholder:text-slate-300"
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Live Savings Summary */}
+                        {originalPrice > price && price > 0 && (
+                          <div className="flex items-center justify-between p-2.5 rounded-xl bg-purple-50/80 border border-purple-200/70 text-xs">
+                            <span className="text-purple-800 font-semibold flex items-center gap-1.5">
+                              <Sparkles className="w-3.5 h-3.5 text-purple-600" /> Customer Savings:
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-purple-900">
+                                ₹{(originalPrice - price).toLocaleString("en-IN")} OFF
+                              </span>
+                              <Badge className="bg-purple-600 text-white border-none font-bold text-[10px] px-1.5 py-0.5">
+                                {Math.round(((originalPrice - price) / originalPrice) * 100)}% OFF
+                              </Badge>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Customer Live Frontend View Preview */}
+                        {originalPrice > price && price > 0 && (
+                          <div className="p-3 rounded-xl bg-white border border-purple-200/80 shadow-2xs space-y-2">
+                            <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                              <span className="flex items-center gap-1.5 text-purple-700">
+                                <Eye className="w-3.5 h-3.5" /> Customer View Preview
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-normal">How it appears on website</span>
+                            </div>
+
+                            <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-between flex-wrap gap-2.5">
+                              {/* Checkout / Detail View */}
+                              <div>
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
+                                  Checkout & Detail Banner:
+                                </span>
+                                <div className="flex items-baseline gap-2">
+                                  <span className="text-base font-black text-slate-900 tracking-tight">
+                                    ₹{price.toLocaleString("en-IN")}
+                                  </span>
+                                  <span className="text-xs font-semibold text-slate-400 line-through">
+                                    ₹{originalPrice.toLocaleString("en-IN")}
+                                  </span>
+                                  <span className="inline-flex items-center text-[10px] font-black text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded-full">
+                                    {Math.round(((originalPrice - price) / originalPrice) * 100)}% OFF
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Card Price Badge */}
+                              <div>
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">
+                                  Card Badge:
+                                </span>
+                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-[11px] font-black shadow-xs">
+                                  <Crown className="w-3 h-3 fill-amber-300 text-amber-300 shrink-0" />
+                                  <span className="line-through text-white/60 font-semibold text-[10px]">
+                                    ₹{originalPrice.toLocaleString("en-IN")}
+                                  </span>
+                                  <span>₹{price.toLocaleString("en-IN")}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {originalPrice <= price && originalPrice > 0 && (
+                          <p className="text-[11px] text-rose-500 font-medium">
+                            ⚠️ Original price must be higher than selling price (₹{price})
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Multi-Currency Automatic Estimator Table */}
@@ -2168,20 +2432,34 @@ export default function TemplateEditorPage() {
                           .filter((r) => r.is_active && r.currency !== "INR")
                           .slice(0, 6)
                           .map((r) => {
-                            const converted = Math.round(price * r.rate * 100) / 100;
+                            const convertedSelling = Math.round(price * r.rate * 100) / 100;
+                            const convertedOrig = hasDiscount && originalPrice > price
+                              ? Math.round(originalPrice * r.rate * 100) / 100
+                              : null;
                             return (
                               <div
                                 key={r.currency}
                                 className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200/60 text-xs"
                               >
                                 <span className="font-semibold text-slate-600">{r.currency}</span>
-                                <span className="font-bold text-slate-900">
-                                  {r.symbol}
-                                  {converted.toLocaleString(undefined, {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2,
-                                  })}
-                                </span>
+                                <div className="flex items-center gap-1.5">
+                                  {convertedOrig && (
+                                    <span className="text-[11px] text-slate-400 line-through">
+                                      {r.symbol}
+                                      {convertedOrig.toLocaleString(undefined, {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}
+                                    </span>
+                                  )}
+                                  <span className="font-bold text-slate-900">
+                                    {r.symbol}
+                                    {convertedSelling.toLocaleString(undefined, {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    })}
+                                  </span>
+                                </div>
                               </div>
                             );
                           })}

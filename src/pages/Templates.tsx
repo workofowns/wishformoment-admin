@@ -33,6 +33,9 @@ interface Template {
   preview_video_url?: string | null;
   price?: number;
   prices?: Record<string, number>;
+  original_price?: number | null;
+  original_prices?: Record<string, number> | null;
+  discount_percent?: number;
   featured_position?: number | null;
   admin_boost?: number;
   meta_title?: string | null;
@@ -273,9 +276,21 @@ const Templates = () => {
                         Free
                       </span>
                     ) : template.price && template.price > 0 ? (
-                      <span className="text-[9px] font-black text-purple-700 uppercase bg-purple-50 px-1.5 py-0.5 rounded-md border border-purple-200">
-                        ₹{(template.price / 100).toLocaleString("en-IN")}
-                      </span>
+                      <div className="flex items-center gap-1">
+                        {template.original_price && template.original_price > template.price && (
+                          <span className="text-[9px] font-bold text-slate-400 line-through">
+                            ₹{(template.original_price / 100).toLocaleString("en-IN")}
+                          </span>
+                        )}
+                        <span className="text-[9px] font-black text-purple-700 uppercase bg-purple-50 px-1.5 py-0.5 rounded-md border border-purple-200">
+                          ₹{(template.price / 100).toLocaleString("en-IN")}
+                        </span>
+                        {template.original_price && template.original_price > template.price && (
+                          <span className="text-[9px] font-black text-rose-600 bg-rose-50 px-1 py-0.5 rounded border border-rose-200">
+                            -{template.discount_percent ?? Math.round(((template.original_price - template.price) / template.original_price) * 100)}%
+                          </span>
+                        )}
+                      </div>
                     ) : (
                       <span className="text-[9px] font-black text-amber-600 uppercase bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200">
                         No Price
