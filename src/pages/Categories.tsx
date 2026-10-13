@@ -526,7 +526,7 @@ export default function Categories() {
                                 >
                                   <div className="flex items-center gap-2.5 min-w-0">
                                     <div
-                                      className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold shrink-0 overflow-hidden"
+                                      className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold shrink-0 overflow-hidden p-2"
                                       style={{
                                         background: sub.theme_color || "#FF8BC4" + "20",
                                       }}

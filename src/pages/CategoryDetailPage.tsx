@@ -473,9 +473,8 @@ export default function CategoryDetailPage() {
                 {isNew ? "Create Category" : "Category Overview & Edit"}
                 {!isNew && (
                   <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                      isActive ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" : "bg-slate-500/10 text-slate-500 border border-slate-500/20"
-                    }`}
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${isActive ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" : "bg-slate-500/10 text-slate-500 border border-slate-500/20"
+                      }`}
                   >
                     {isActive ? "Active" : "Inactive"}
                   </span>
@@ -706,11 +705,10 @@ export default function CategoryDetailPage() {
                         key={p.label}
                         type="button"
                         onClick={() => setThemeColor(p.value)}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all border cursor-pointer ${
-                          isSelected
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all border cursor-pointer ${isSelected
                             ? "bg-primary/10 border-primary text-primary font-bold shadow-2xs"
                             : "bg-background hover:bg-muted border-border/80 text-muted-foreground hover:text-foreground"
-                        }`}
+                          }`}
                       >
                         <span
                           className="w-2.5 h-2.5 rounded-full border border-black/10 shrink-0"
@@ -947,16 +945,15 @@ export default function CategoryDetailPage() {
                     {subcategoriesList.map((sub) => (
                       <div
                         key={sub.id}
-                        className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border transition-all ${
-                          sub.is_active
+                        className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border transition-all ${sub.is_active
                             ? "bg-background border-border/70 hover:border-primary/40 hover:shadow-sm"
                             : "bg-muted/40 border-dashed border-border opacity-70"
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center gap-3.5 min-w-0">
                           {/* Avatar icon or image */}
                           <div
-                            className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shadow-xs overflow-hidden shrink-0"
+                            className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shadow-xs overflow-hidden shrink-0 p-2"
                             style={
                               sub.theme_color?.includes("gradient")
                                 ? { background: sub.theme_color }
@@ -1097,8 +1094,8 @@ export default function CategoryDetailPage() {
                   background: themeColor?.includes("gradient")
                     ? themeColor
                     : themeColor
-                    ? `linear-gradient(135deg, ${themeColor}15, ${themeColor}05)`
-                    : "linear-gradient(135deg, rgba(108, 65, 207, 0.1), rgba(108, 65, 207, 0.02))",
+                      ? `linear-gradient(135deg, ${themeColor}15, ${themeColor}05)`
+                      : "linear-gradient(135deg, rgba(108, 65, 207, 0.1), rgba(108, 65, 207, 0.02))",
                 }}
               >
                 {/* Visual Header */}
@@ -1130,9 +1127,8 @@ export default function CategoryDetailPage() {
                       </span>
                     )}
                     <span
-                      className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-md ${
-                        isActive ? "bg-emerald-500/20 text-emerald-700" : "bg-slate-500/20 text-slate-700"
-                      }`}
+                      className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-md ${isActive ? "bg-emerald-500/20 text-emerald-700" : "bg-slate-500/20 text-slate-700"
+                        }`}
                     >
                       {isActive ? "Visible" : "Hidden"}
                     </span>
