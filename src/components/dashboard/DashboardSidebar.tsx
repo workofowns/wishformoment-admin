@@ -51,7 +51,7 @@ const DashboardSidebar = () => {
     <aside className="fixed left-0 top-0 h-screen w-[76px] btn-primary shadow-none hover:shadow-none flex flex-col items-center py-6 z-50">
       {/* Logo */}
       <div className="mb-8 flex flex-col items-center">
-        <img src="/images/smallLogo.png" alt="WishForMoment" loading="eager" className="w-10 h-10" />
+        <img src="/images/smallLogo.webp" alt="WishForMoment" loading="eager" className="w-10 h-10" />
       </div>
 
       {/* Navigation */}
