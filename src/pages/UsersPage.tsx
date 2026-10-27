@@ -40,16 +40,6 @@ const UsersPage = () => {
     queryFn: () => fetchApi(`/users?search=${encodeURIComponent(search)}`),
   });
 
-  const updateMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: any }) =>
-      fetchApi(`/users/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
-      toast.success("User updated successfully");
-    },
-    onError: (e: any) => toast.error(e.message || "Update failed"),
-  });
-
   const deleteMutation = useMutation({
     mutationFn: (id: string) => fetchApi(`/users/${id}`, { method: "DELETE" }),
     onSuccess: () => {
@@ -249,25 +239,6 @@ const UsersPage = () => {
                             <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
                           </button>
 
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              updateMutation.mutate({
-                                id: user.id,
-                                payload: { isVerified: !user.is_verified },
-                              });
-                            }}
-                            className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-muted hover:bg-blue-50 transition-colors group"
-                          >
-                            <span className="text-[10px] font-bold">Toggle Verification</span>
-                            <BadgeCheck
-                              className={`w-4 h-4 ${
-                                user.is_verified
-                                  ? "text-blue-500"
-                                  : "text-muted-foreground/30"
-                              }`}
-                            />
-                          </button>
 
                           <button
                             onClick={(e) => {
