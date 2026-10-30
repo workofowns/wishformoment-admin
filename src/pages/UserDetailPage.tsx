@@ -175,10 +175,12 @@ function formatAmountDisplay(amount: number, currency: string): string {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency,
-      minimumFractionDigits: 2,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
     }).format(amount / 100);
   } catch {
-    return `${(amount / 100).toFixed(2)} ${currency}`;
+    const val = amount / 100;
+    return `${val % 1 === 0 ? val : val.toFixed(2)} ${currency}`;
   }
 }
 
