@@ -41,7 +41,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 
-import { fetchApi } from "@/lib/api";
+import { fetchApi, getWishUrl } from "@/lib/api";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import {
   Dialog,
@@ -720,7 +720,7 @@ const UserDetailPage = () => {
                           <span className="font-bold">{p.template_name || "Custom Template"}</span>
                           {p.wish_id && (
                             <a
-                              href={`/wish/${p.wish_id}`}
+                              href={getWishUrl(p.wish_id)}
                               target="_blank"
                               rel="noreferrer"
                               className="text-[10px] text-primary flex items-center gap-0.5 hover:underline mt-0.5"
@@ -1039,7 +1039,7 @@ const UserDetailPage = () => {
 
                             {w.is_published && (
                               <a
-                                href={`/wish/${w.id}`}
+                                href={getWishUrl(w.id)}
                                 target="_blank"
                                 rel="noreferrer"
                                 title="Open Live Wish"

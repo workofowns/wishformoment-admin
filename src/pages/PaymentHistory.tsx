@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { fetchApi } from "@/lib/api";
+import { fetchApi, getWishUrl } from "@/lib/api";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import {
   CreditCard,
@@ -24,6 +25,7 @@ import { toast } from "sonner";
 
 interface PaymentRecord {
   id: string;
+  user_id?: string | null;
   razorpay_order_id: string;
   razorpay_payment_id: string | null;
   amount: number;
@@ -189,7 +191,7 @@ const PaymentHistory = () => {
 
         {/* Stats */}
         {stats && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
             <StatCard
               icon={IndianRupee}
               label="Total Revenue (INR)"
@@ -213,6 +215,12 @@ const PaymentHistory = () => {
               label="Pending"
               value={stats.pending_count}
               color="bg-amber-100 text-amber-700"
+            />
+            <StatCard
+              icon={RotateCcw}
+              label="Refunded"
+              value={stats.refunded_count ?? "0"}
+              color="bg-purple-100 text-purple-700"
             />
           </div>
         )}
@@ -313,9 +321,20 @@ const PaymentHistory = () => {
                           <p className="truncate text-sm font-semibold text-foreground">
                             {row.template_name ?? "Unknown Template"}
                           </p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {row.user_email ?? "—"}
-                          </p>
+                          {row.user_id ? (
+                            <Link
+                              to={`/users/${row.user_id}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="truncate text-xs text-muted-foreground hover:text-primary hover:underline block"
+                              title="Go to user profile"
+                            >
+                              {row.user_email ?? "—"}
+                            </Link>
+                          ) : (
+                            <p className="truncate text-xs text-muted-foreground">
+                              {row.user_email ?? "—"}
+                            </p>
+                          )}
                         </div>
                       </div>
 
@@ -388,9 +407,21 @@ const PaymentHistory = () => {
                             </div>
                             <div>
                               <p className="text-muted-foreground mb-0.5">User</p>
-                              <p className="font-semibold text-foreground">
-                                {row.user_display_name ?? row.user_email ?? "—"}
-                              </p>
+                              {row.user_id ? (
+                                <Link
+                                  to={`/users/${row.user_id}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
+                                  title="View user details"
+                                >
+                                  {row.user_display_name ?? row.user_email ?? "View User"}
+                                  <ExternalLink className="h-3 w-3" />
+                                </Link>
+                              ) : (
+                                <p className="font-semibold text-foreground">
+                                  {row.user_display_name ?? row.user_email ?? "—"}
+                                </p>
+                              )}
                             </div>
                             <div>
                               <p className="text-muted-foreground mb-0.5">Last Updated</p>
@@ -402,7 +433,7 @@ const PaymentHistory = () => {
                               <div>
                                 <p className="text-muted-foreground mb-0.5">Wish</p>
                                 <a
-                                  href={`${import.meta.env.VITE_FRONTEND_URL ?? "https://wishformoment.com"}/wish/${row.wish_id}`}
+                                  href={getWishUrl(row.wish_id)}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
