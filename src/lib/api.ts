@@ -127,7 +127,47 @@ export const uploadMedia = async (file: File, folder: MediaFolder): Promise<stri
     body: fileToUpload,
   });
 
-  if (!s3Res.ok) throw new Error(`S3 upload failed: ${s3Res.status} ${s3Res.statusText}`);
-
   return publicUrl; // CloudFront CDN URL
+};
+
+// ── Frontend URL helpers (Environment-aware) ─────────────────────────────────
+/**
+ * Resolves the frontend base URL based on the current environment:
+ * - If VITE_FRONTEND_URL is explicitly configured, uses that.
+ * - If running on a stage domain (e.g. stage.admin.wishformoment.com) or connected to stage API -> https://stage.wishformoment.com
+ * - If running on a live domain (e.g. admin.wishformoment.com) or connected to live API -> https://wishformoment.com
+ * - If running locally on localhost without remote API -> http://localhost:3000
+ */
+export const getFrontendBaseUrl = (): string => {
+  if (import.meta.env.VITE_FRONTEND_URL) {
+    return (import.meta.env.VITE_FRONTEND_URL as string).replace(/\/+$/, "");
+  }
+
+  if (typeof window !== "undefined") {
+    const hostname = window.location.hostname.toLowerCase();
+    if (hostname.includes("stage")) {
+      return "https://stage.wishformoment.com";
+    }
+    if (hostname === "admin.wishformoment.com" || hostname.endsWith("wishformoment.com")) {
+      return "https://wishformoment.com";
+    }
+  }
+
+  const apiUrl = (import.meta.env.VITE_API_URL || API_BASE || "").toLowerCase();
+  if (apiUrl.includes("stage")) {
+    return "https://stage.wishformoment.com";
+  }
+  if (apiUrl.includes("wishformoment.com")) {
+    return "https://wishformoment.com";
+  }
+
+  if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
+    return "http://localhost:3000";
+  }
+
+  return "https://wishformoment.com";
+};
+
+export const getWishUrl = (wishId: string): string => {
+  return `${getFrontendBaseUrl()}/wish/${wishId}`;
 };

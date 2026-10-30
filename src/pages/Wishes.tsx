@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchApi } from "@/lib/api";
+import { fetchApi, getWishUrl } from "@/lib/api";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { 
   Sparkles, 
@@ -66,16 +66,7 @@ interface WishesResponse {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-const getLiveWishUrl = (id: string) => {
-  const envUrl = import.meta.env.VITE_FRONTEND_URL;
-  if (envUrl) {
-    return `${envUrl.replace(/\/+$/, "")}/wish/${id}`;
-  }
-  if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-    return `http://localhost:3000/wish/${id}`;
-  }
-  return `https://wishformoment.com/wish/${id}`;
-};
+const getLiveWishUrl = (id: string) => getWishUrl(id);
 
 const getWishThumbnail = (wish: Wish): string | null => {
   if (wish.template_thumbnail) return wish.template_thumbnail;

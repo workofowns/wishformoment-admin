@@ -268,7 +268,8 @@ const CurrencyRates = () => {
                 ) : (
                   rates.map((rate) => {
                     const isBase = rate.currency === "INR";
-                    const examplePrice = (299 * rate.rate).toFixed(2);
+                    const calculated = Number((299 * rate.rate).toFixed(2));
+                    const examplePrice = calculated.toString();
 
                     return (
                       <tr
@@ -397,7 +398,7 @@ const CurrencyRates = () => {
                 {parseFloat(editRateValue) > 0 && (
                   <p className="text-[11px] text-purple-600 font-medium pt-1">
                     Preview: ₹299 INR = {editSymbolValue}
-                    {(299 * parseFloat(editRateValue)).toFixed(2)} {editingRate?.currency}
+                    {parseFloat((299 * parseFloat(editRateValue)).toFixed(2))} {editingRate?.currency}
                   </p>
                 )}
               </div>

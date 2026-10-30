@@ -36,13 +36,12 @@ import {
   Globe,
   DollarSign,
   User as UserIcon,
-  ShieldCheck,
   Lock,
   Send,
   RotateCcw,
 } from "lucide-react";
 
-import { fetchApi } from "@/lib/api";
+import { fetchApi, getWishUrl } from "@/lib/api";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import {
   Dialog,
@@ -176,10 +175,12 @@ function formatAmountDisplay(amount: number, currency: string): string {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency,
-      minimumFractionDigits: 2,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
     }).format(amount / 100);
   } catch {
-    return `${(amount / 100).toFixed(2)} ${currency}`;
+    const val = amount / 100;
+    return `${val % 1 === 0 ? val : val.toFixed(2)} ${currency}`;
   }
 }
 
@@ -277,18 +278,6 @@ const UserDetailPage = () => {
     enabled: !!id,
   });
 
-  // Mutations
-  const updateUserMutation = useMutation({
-    mutationFn: (payload: any) =>
-      fetchApi(`/users/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["adminUserDetail", id] });
-      queryClient.invalidateQueries({ queryKey: ["adminUserLogs", id] });
-      queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
-      toast.success("User updated successfully");
-    },
-    onError: (err: any) => toast.error(err.message || "Failed to update user"),
-  });
 
   const deleteUserMutation = useMutation({
     mutationFn: () => fetchApi(`/users/${id}`, { method: "DELETE" }),
@@ -524,38 +513,6 @@ const UserDetailPage = () => {
               </div>
             </div>
 
-            {/* Quick Action Management Buttons */}
-            <div className="flex flex-wrap lg:flex-col gap-2 shrink-0">
-              <button
-                onClick={() =>
-                  updateUserMutation.mutate({ isVerified: !user.is_verified })
-                }
-                className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${user.is_verified
-                  ? "bg-slate-100 hover:bg-slate-200 text-slate-700"
-                  : "bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
-                  }`}
-              >
-                <BadgeCheck className="w-3.5 h-3.5" />
-                <span>{user.is_verified ? "Revoke Verification" : "Verify Account"}</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  const nextRole = user.role === "admin" ? "user" : "admin";
-                  if (
-                    window.confirm(
-                      `Change role for ${user.email} to '${nextRole.toUpperCase()}'?`
-                    )
-                  ) {
-                    updateUserMutation.mutate({ role: nextRole });
-                  }
-                }}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-muted hover:bg-muted/80 text-foreground transition-all"
-              >
-                <ShieldCheck className="w-3.5 h-3.5 text-primary" />
-                <span>Make {user.role === "admin" ? "User" : "Admin"}</span>
-              </button>
-            </div>
           </div>
 
           {/* User Metadata Grid */}
@@ -765,7 +722,7 @@ const UserDetailPage = () => {
                           <span className="font-bold">{p.template_name || "Custom Template"}</span>
                           {p.wish_id && (
                             <a
-                              href={`/wish/${p.wish_id}`}
+                              href={getWishUrl(p.wish_id)}
                               target="_blank"
                               rel="noreferrer"
                               className="text-[10px] text-primary flex items-center gap-0.5 hover:underline mt-0.5"
@@ -1084,7 +1041,7 @@ const UserDetailPage = () => {
 
                             {w.is_published && (
                               <a
-                                href={`/wish/${w.id}`}
+                                href={getWishUrl(w.id)}
                                 target="_blank"
                                 rel="noreferrer"
                                 title="Open Live Wish"
