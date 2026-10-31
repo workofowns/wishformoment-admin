@@ -469,11 +469,11 @@ const FieldBuilder = ({ fields, onChange }: FieldBuilderProps) => {
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-xs font-bold text-slate-800 truncate" title={field.defaultValue}>
-                                {field.defaultValue
+                                {field.musicName || field.music_name || (field.defaultValue
                                   ? (field.defaultValue.startsWith("http://") || field.defaultValue.startsWith("https://")
                                       ? decodeURIComponent(field.defaultValue.split("/").pop()?.split("?")[0] || field.defaultValue)
                                       : field.defaultValue)
-                                  : "No default selected"}
+                                  : "No default selected")}
                               </p>
                             </div>
                             <div className="flex gap-2">
@@ -546,8 +546,13 @@ const FieldBuilder = ({ fields, onChange }: FieldBuilderProps) => {
                       <MusicSelector
                         isOpen={musicSelectorOpen === i}
                         onClose={() => setMusicSelectorOpen(null)}
+                        selectedValue={field.defaultValue}
                         onSelect={(m) => {
-                          updateField(i, { defaultValue: m.music_url }); // Store song URL as default
+                          updateField(i, {
+                            defaultValue: m.music_url,
+                            musicName: m.name,
+                            music_name: m.name,
+                          });
                           setMusicSelectorOpen(null);
                         }}
                       />
