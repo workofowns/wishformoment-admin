@@ -23,37 +23,37 @@ export interface PresetCategory {
 export const PRESET_CATEGORIES: PresetCategory[] = [
   {
     id: "bollywood",
-    label: "🇮🇳 Bollywood",
+    label: "Bollywood",
     query: "bollywood romantic hindi hits",
     country: "IN"
   },
   {
     id: "tollywood",
-    label: "🎬 Tollywood",
+    label: "Tollywood",
     query: "tollywood telugu hits",
     country: "IN"
   },
   {
     id: "english",
-    label: "🌍 Hollywood & English",
+    label: "Hollywood & English",
     query: "billboard top pop hits",
     country: "US"
   },
   {
     id: "birthday",
-    label: "🎂 Birthday Special",
+    label: "Birthday Special",
     query: "happy birthday song",
     country: "IN"
   },
   {
     id: "party_dj",
-    label: "🎧 DJ / Party",
+    label: "DJ & Party",
     query: "bollywood party remix dj",
     country: "IN"
   },
   {
     id: "lovely",
-    label: "❤️ Romantic",
+    label: "Romantic",
     query: "romantic love songs",
     country: "IN"
   }
@@ -133,7 +133,7 @@ export async function fetchPresetCategoryTracks(categoryId: string): Promise<Mus
         music_url: t.previewUrl,
         thumbnail_url: t.artworkUrl100 ? t.artworkUrl100.replace('100x100bb', '200x200bb') : null,
         duration: 30,
-        category: preset.label.replace(/^[^\w\s]+/, '').trim()
+        category: preset.label
       }));
 
     if (tracks.length > 0) {

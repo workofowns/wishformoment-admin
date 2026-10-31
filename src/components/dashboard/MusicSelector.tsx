@@ -238,9 +238,26 @@ const MusicSelector = ({
         {/* List */}
         <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
           {isLoading ? (
-            <div className="h-48 flex flex-col items-center justify-center gap-3 text-slate-300">
-              <RefreshCw className="w-8 h-8 animate-spin text-indigo-500" />
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Loading audio previews...</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              {[...Array(6)].map((_, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-100 bg-slate-50/60 animate-pulse"
+                >
+                  <div className="w-14 h-14 rounded-xl bg-slate-200 shrink-0" />
+                  <div className="flex-1 space-y-2 min-w-0">
+                    <div
+                      className="h-3.5 bg-slate-200 rounded"
+                      style={{ width: i % 2 === 0 ? "70%" : "55%" }}
+                    />
+                    <div className="flex items-center gap-2">
+                      <div className="h-2.5 bg-slate-200 rounded w-16" />
+                      <div className="h-2.5 bg-slate-200 rounded w-12" />
+                    </div>
+                  </div>
+                  <div className="h-7 w-16 bg-slate-200 rounded-xl shrink-0" />
+                </div>
+              ))}
             </div>
           ) : filtered.length === 0 ? (
             <div className="h-48 flex flex-col items-center justify-center text-center p-8">
