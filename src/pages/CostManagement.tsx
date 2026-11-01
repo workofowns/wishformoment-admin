@@ -559,13 +559,22 @@ export default function CostManagement() {
                     ))}
                   </Pie>
                   <RechartsTooltip
-                    formatter={(value: any) => [formatCost(Number(value)), "Cost"]}
+                    formatter={(value: any, name: any) => [formatCost(Number(value)), name || "Cost"]}
                     contentStyle={{
-                      backgroundColor: "#1e293b",
+                      backgroundColor: "#0f172a",
                       borderRadius: "8px",
-                      color: "#fff",
-                      border: "none",
+                      border: "1px solid #334155",
+                      color: "#ffffff",
                       fontSize: "12px",
+                      boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.3)",
+                    }}
+                    itemStyle={{
+                      color: "#f8fafc",
+                    }}
+                    labelStyle={{
+                      color: "#cbd5e1",
+                      fontWeight: 600,
+                      marginBottom: "4px",
                     }}
                   />
                 </PieChart>
@@ -627,13 +636,22 @@ export default function CostManagement() {
                   <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} tickLine={false} />
                   <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} />
                   <RechartsTooltip
-                    formatter={(val: any) => [`$${Number(val).toFixed(2)}`, ""]}
+                    formatter={(val: any, name: any) => [formatCost(Number(val)), name]}
                     contentStyle={{
-                      backgroundColor: "#1e293b",
+                      backgroundColor: "#0f172a",
                       borderRadius: "8px",
-                      color: "#fff",
-                      border: "none",
+                      border: "1px solid #334155",
+                      color: "#ffffff",
                       fontSize: "12px",
+                      boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.3)",
+                    }}
+                    itemStyle={{
+                      color: "#f8fafc",
+                    }}
+                    labelStyle={{
+                      color: "#cbd5e1",
+                      fontWeight: 600,
+                      marginBottom: "4px",
                     }}
                   />
                   <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "12px" }} />
