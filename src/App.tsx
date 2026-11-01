@@ -24,6 +24,7 @@ import Media from "./pages/Media";
 import CurrencyRates from "./pages/CurrencyRates";
 import PaymentHistory from "./pages/PaymentHistory";
 import CacheManagement from "./pages/CacheManagement";
+import CostManagement from "./pages/CostManagement";
 import './App.scss';
 
 const queryClient = new QueryClient({
@@ -64,6 +65,7 @@ const App = () => (
           <Route path="/trending-templates" element={<RequireAuth><TrendingTemplates /></RequireAuth>} />
           <Route path="/currency-rates" element={<RequireAuth><CurrencyRates /></RequireAuth>} />
           <Route path="/payments" element={<RequireAuth><PaymentHistory /></RequireAuth>} />
+          <Route path="/costs" element={<RequireAuth><CostManagement /></RequireAuth>} />
           <Route path="/cache" element={<RequireAuth><CacheManagement /></RequireAuth>} />
           <Route path="/wishes" element={<RequireAuth><Wishes /></RequireAuth>} />
           <Route path="/contact" element={<RequireAuth><ContactMessages /></RequireAuth>} />

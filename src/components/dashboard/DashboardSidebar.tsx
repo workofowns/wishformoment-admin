@@ -14,6 +14,7 @@ import {
   Flame,
   Coins,
   CreditCard,
+  Receipt,
   Database,
   Trophy,
 } from "lucide-react";
@@ -28,6 +29,7 @@ const navItems = [
   { icon: Flame, label: "Trending", path: "/trending-templates" },
   { icon: Coins, label: "Rates", path: "/currency-rates" },
   { icon: CreditCard, label: "Payments", path: "/payments" },
+  { icon: Receipt, label: "Costs", path: "/costs" },
   { icon: Database, label: "Cache", path: "/cache" },
   { icon: Sparkles, label: "Wishes", path: "/wishes" },
   { icon: Users, label: "Users", path: "/users" },
