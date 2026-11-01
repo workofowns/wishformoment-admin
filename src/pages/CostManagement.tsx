@@ -429,7 +429,6 @@ export default function CostManagement() {
                 <tr className="bg-slate-100/60 text-slate-600 text-xs font-semibold uppercase tracking-wider border-b border-slate-200">
                   <th className="py-3.5 px-6">Platform & Service</th>
                   <th className="py-3.5 px-6">Paid By (Payer Name)</th>
-                  <th className="py-3.5 px-6">Payment Method</th>
                   <th className="py-3.5 px-6">Renewal Cycle</th>
                   <th className="py-3.5 px-6">API Status</th>
                   <th className="py-3.5 px-6 text-right">Cost ({activeMonthLabel})</th>
@@ -480,18 +479,6 @@ export default function CostManagement() {
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium text-slate-400 bg-slate-100">
                             Not Found
                           </span>
-                        )}
-                      </td>
-
-                      {/* Payment Method */}
-                      <td className="py-4 px-6">
-                        {p.paymentMethod !== "Not Found" ? (
-                          <div className="flex items-center gap-1.5 text-xs text-slate-700 font-medium">
-                            <CreditCard className="w-3.5 h-3.5 text-slate-400" />
-                            <span>{p.paymentMethod}</span>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-slate-400 italic">Not Found</span>
                         )}
                       </td>
 
@@ -839,13 +826,12 @@ export default function CostManagement() {
                   <div className="px-5 py-3 bg-slate-50/80 border-t border-slate-100 flex items-center gap-2">
                     <span className="text-[11px] text-slate-400">API Status:</span>
                     <strong
-                      className={`text-[11px] font-semibold ${
-                        p.apiStatus === "connected"
-                          ? "text-emerald-600"
-                          : p.apiStatus === "error"
+                      className={`text-[11px] font-semibold ${p.apiStatus === "connected"
+                        ? "text-emerald-600"
+                        : p.apiStatus === "error"
                           ? "text-amber-600"
                           : "text-slate-500"
-                      }`}
+                        }`}
                     >
                       {p.status}
                     </strong>

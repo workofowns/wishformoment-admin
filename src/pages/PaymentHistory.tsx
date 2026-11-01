@@ -56,6 +56,10 @@ interface PaymentsResponse {
     failed_count: string;
     pending_count: string;
     refunded_count?: string;
+    paid_amount?: string;
+    failed_amount?: string;
+    pending_amount?: string;
+    refunded_amount?: string;
   };
 }
 
@@ -85,10 +89,10 @@ function formatInr(paise: number | string): string {
 }
 
 const STATUS_META = {
-  paid:     { label: "Paid",     bg: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500", Icon: CheckCircle2 },
-  failed:   { label: "Failed",   bg: "bg-red-50 text-red-700 border-red-200",             dot: "bg-red-500",     Icon: XCircle },
-  created:  { label: "Pending",  bg: "bg-amber-50 text-amber-700 border-amber-200",        dot: "bg-amber-500",   Icon: Clock },
-  refunded: { label: "Refunded", bg: "bg-purple-50 text-purple-700 border-purple-200",    dot: "bg-purple-500",  Icon: RotateCcw },
+  paid: { label: "Paid", bg: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500", Icon: CheckCircle2 },
+  failed: { label: "Failed", bg: "bg-red-50 text-red-700 border-red-200", dot: "bg-red-500", Icon: XCircle },
+  created: { label: "Pending", bg: "bg-amber-50 text-amber-700 border-amber-200", dot: "bg-amber-500", Icon: Clock },
+  refunded: { label: "Refunded", bg: "bg-purple-50 text-purple-700 border-purple-200", dot: "bg-purple-500", Icon: RotateCcw },
 } as const;
 
 function StatusBadge({ status }: { status: "paid" | "failed" | "created" | "refunded" }) {
@@ -111,11 +115,13 @@ function StatCard({
   icon: Icon,
   label,
   value,
+  subValue,
   color,
 }: {
   icon: React.ElementType;
   label: string;
   value: string;
+  subValue?: string;
   color: string;
 }) {
   return (
@@ -126,6 +132,9 @@ function StatCard({
       <div>
         <p className="text-xs text-muted-foreground">{label}</p>
         <p className="text-xl font-bold text-foreground mt-0.5">{value}</p>
+        {subValue && (
+          <p className="text-xs text-muted-foreground mt-0.5">{subValue}</p>
+        )}
       </div>
     </div>
   );
@@ -204,24 +213,28 @@ const PaymentHistory = () => {
               icon={CheckCircle2}
               label="Successful"
               value={stats.paid_count}
+              subValue={stats.paid_amount ? formatInr(stats.paid_amount) : undefined}
               color="bg-violet-100 text-violet-700"
             />
             <StatCard
               icon={XCircle}
               label="Failed"
               value={stats.failed_count}
+              subValue={stats.failed_amount ? formatInr(stats.failed_amount) : undefined}
               color="bg-red-100 text-red-700"
             />
             <StatCard
               icon={Clock}
               label="Pending"
               value={stats.pending_count}
+              subValue={stats.pending_amount ? formatInr(stats.pending_amount) : undefined}
               color="bg-amber-100 text-amber-700"
             />
             <StatCard
               icon={RotateCcw}
               label="Refunded"
               value={stats.refunded_count ?? "0"}
+              subValue={stats.refunded_amount ? formatInr(stats.refunded_amount) : undefined}
               color="bg-purple-100 text-purple-700"
             />
           </div>
@@ -243,11 +256,10 @@ const PaymentHistory = () => {
               <button
                 key={s}
                 onClick={() => handleFilterChange(s)}
-                className={`px-3 py-2 rounded-xl text-xs font-semibold border transition capitalize ${
-                  statusFilter === s
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-card border-border text-muted-foreground hover:border-primary/50"
-                }`}
+                className={`px-3 py-2 rounded-xl text-xs font-semibold border transition capitalize ${statusFilter === s
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-card border-border text-muted-foreground hover:border-primary/50"
+                  }`}
               >
                 {s === "created" ? "Pending" : s === "all" ? "All" : s.charAt(0).toUpperCase() + s.slice(1)}
               </button>
