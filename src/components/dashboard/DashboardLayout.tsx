@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import DashboardSidebar from "./DashboardSidebar";
 
 interface DashboardLayoutProps {
@@ -6,10 +6,26 @@ interface DashboardLayoutProps {
 }
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
+    return localStorage.getItem("admin_sidebar_collapsed") === "true";
+  });
+
+  useEffect(() => {
+    const handleToggle = (e: any) => {
+      setIsCollapsed(Boolean(e.detail));
+    };
+    window.addEventListener("sidebar_toggle", handleToggle);
+    return () => window.removeEventListener("sidebar_toggle", handleToggle);
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
-      <DashboardSidebar />
-      <main className="ml-[76px] min-h-screen p-8">
+      <DashboardSidebar isCollapsed={isCollapsed} onToggleCollapse={setIsCollapsed} />
+      <main
+        className={`min-h-screen p-6 sm:p-8 transition-all duration-300 ease-in-out ${
+          isCollapsed ? "ml-[76px]" : "ml-[220px]"
+        }`}
+      >
         {children}
       </main>
     </div>
