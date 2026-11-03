@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import {
   MessageSquare,
   Search,
@@ -69,8 +68,7 @@ const ContactMessages = () => {
   };
 
   return (
-    <DashboardLayout>
-      <div className="w-full">
+    <div className="w-full">
         <header className="mb-8 flex items-center justify-between">
           <div>
             <p className="sub-label mb-1">Support Desk</p>
@@ -192,7 +190,6 @@ const ContactMessages = () => {
           </div>
         </div>
       </div>
-    </DashboardLayout>
   );
 };
 

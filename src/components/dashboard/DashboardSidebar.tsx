@@ -18,6 +18,7 @@ import {
   Receipt,
   Database,
   Trophy,
+  Terminal,
   ChevronLeft,
   ChevronRight,
   LucideIcon,
@@ -64,6 +65,7 @@ const navGroups: NavGroup[] = [
       { icon: Coins, label: "Currency Rates", path: "/currency-rates" },
       { icon: Receipt, label: "Cloud Costs", path: "/costs" },
       { icon: Database, label: "Redis Cache", path: "/cache" },
+      { icon: Terminal, label: "Server Logs", path: "/logs" },
     ],
   },
   {

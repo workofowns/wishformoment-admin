@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { fetchApi } from "@/lib/api";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
+
 import {
   Select,
   SelectContent,
@@ -293,7 +293,7 @@ export default function RankingsPage() {
       : overviewData?.subCategories;
 
   return (
-    <DashboardLayout>
+
       <div className="max-w-7xl mx-auto space-y-6 pb-12">
         {/* ════ HEADER SECTION ════ */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -1558,6 +1558,6 @@ export default function RankingsPage() {
           )}
         </AnimatePresence>
       </div>
-    </DashboardLayout>
+
   );
 }

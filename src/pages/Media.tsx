@@ -1,5 +1,5 @@
 import { useState } from "react";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
+
 import { Image as ImageIcon, Music } from "lucide-react";
 import S3ImageManager from "@/components/dashboard/S3ImageManager";
 import S3MusicManager from "@/components/dashboard/S3MusicManager";
@@ -8,7 +8,7 @@ const Media = () => {
   const [mediaType, setMediaType] = useState<"images" | "music">("images");
 
   return (
-    <DashboardLayout>
+
       <div className="flex flex-col gap-8 pb-20">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -49,7 +49,7 @@ const Media = () => {
           <S3MusicManager />
         )}
       </div>
-    </DashboardLayout>
+
   );
 };
 

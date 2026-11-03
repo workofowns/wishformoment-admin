@@ -2,7 +2,6 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { fetchApi } from "@/lib/api";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import {
   Database,
   RefreshCw,
@@ -182,8 +181,7 @@ const CacheManagement = () => {
   };
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6 pb-12">
+    <div className="space-y-6 pb-12">
         {/* Top Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -599,7 +597,6 @@ const CacheManagement = () => {
           </DialogContent>
         </Dialog>
       </div>
-    </DashboardLayout>
   );
 };
 

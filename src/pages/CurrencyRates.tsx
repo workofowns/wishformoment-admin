@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import { fetchApi } from "@/lib/api";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
+
 import {
   Coins,
   Plus,
@@ -169,7 +169,7 @@ const CurrencyRates = () => {
   const activeCount = rates.filter((r) => r.is_active).length;
 
   return (
-    <DashboardLayout>
+
       <div className="w-full">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
@@ -508,7 +508,7 @@ const CurrencyRates = () => {
           </DialogContent>
         </Dialog>
       </div>
-    </DashboardLayout>
+
   );
 };
 

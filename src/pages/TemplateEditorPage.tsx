@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchApi, uploadMedia, MEDIA_FOLDERS } from "@/lib/api";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
+
 import FormBuilder, { FormStep } from "@/components/dashboard/FormBuilder";
 import {
   ArrowLeft, Check, Crown, Globe, Image, Layout, Layers, Plus, RefreshCw,
@@ -1008,17 +1008,17 @@ export default function TemplateEditorPage() {
 
   if (isEditing && isLoadingTemplate) {
     return (
-      <DashboardLayout>
+
         <div className="min-h-[500px] flex flex-col items-center justify-center gap-3">
           <RefreshCw className="w-8 h-8 text-primary animate-spin" />
           <p className="text-sm font-bold text-slate-500">Loading template data...</p>
         </div>
-      </DashboardLayout>
+
     );
   }
 
   return (
-    <DashboardLayout>
+
       <div className="w-full max-w-[1600px] mx-auto space-y-8 pb-20 px-2 sm:px-4">
         {/* ── Top Header Navigation Bar ── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200">
@@ -2741,6 +2741,6 @@ export default function TemplateEditorPage() {
           </div>
         </div>
       </div>
-    </DashboardLayout>
+
   );
 }

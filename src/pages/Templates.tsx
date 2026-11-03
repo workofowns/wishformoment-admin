@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
+
 import {
   Plus, Search, Crown, Edit2, Trash2, Layout, Box, Sparkles, Zap, Globe
 } from "lucide-react";
@@ -106,7 +106,7 @@ const Templates = () => {
   };
 
   return (
-    <DashboardLayout>
+
       <div className="w-full max-w-7xl mx-auto">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
@@ -322,7 +322,7 @@ const Templates = () => {
           </div>
         )}
       </div>
-    </DashboardLayout>
+
   );
 };
 

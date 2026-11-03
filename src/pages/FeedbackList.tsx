@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
+
 import {
   MessageSquarePlus,
   Search,
@@ -96,7 +96,7 @@ const FeedbackList = () => {
   };
 
   return (
-    <DashboardLayout>
+
       <div className="w-full">
         {/* Header */}
         <header className="mb-6 flex items-center justify-between flex-wrap gap-4">
@@ -300,7 +300,7 @@ const FeedbackList = () => {
           </div>
         )}
       </div>
-    </DashboardLayout>
+
   );
 };
 

@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { API_BASE, fetchApi } from "@/lib/api";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import {
    TrendingUp,
    Users,
@@ -103,8 +102,7 @@ const Analytics = () => {
    const funnelSteps = funnelRes?.data || [];
 
    return (
-      <DashboardLayout>
-         <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                <div>
                   <p className="sub-label mb-1 text-primary">Intelligence Hub</p>
@@ -321,7 +319,6 @@ const Analytics = () => {
                </div>
             </div>
          </div>
-      </DashboardLayout>
    );
 };
 

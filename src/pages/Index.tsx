@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi, getFrontendBaseUrl } from "@/lib/api";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import StatCard from "@/components/dashboard/StatCard";
 import RecentActivity from "@/components/dashboard/RecentActivity";
 import AttentionAlerts from "@/components/dashboard/AttentionAlerts";
@@ -176,8 +175,7 @@ const Index = () => {
   };
 
   return (
-    <DashboardLayout>
-      <div className="w-full max-w-7xl mx-auto space-y-6 pb-12">
+    <div className="w-full max-w-7xl mx-auto space-y-6 pb-12">
         {/* ── Top Header & Platform Controls ─────────────────────────────────── */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-border/40">
           <div>
@@ -365,7 +363,6 @@ const Index = () => {
           <RecentActivity />
         </div>
       </div>
-    </DashboardLayout>
   );
 };
 

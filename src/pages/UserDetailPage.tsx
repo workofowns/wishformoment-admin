@@ -42,7 +42,7 @@ import {
 } from "lucide-react";
 
 import { fetchApi, getWishUrl } from "@/lib/api";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
+
 import {
   Dialog,
   DialogContent,
@@ -340,18 +340,18 @@ const UserDetailPage = () => {
 
   if (isUserLoading) {
     return (
-      <DashboardLayout>
+
         <div className="max-w-6xl mx-auto py-16 flex flex-col items-center justify-center gap-4 text-center">
           <div className="w-10 h-10 border-3 border-primary/20 border-t-primary rounded-full animate-spin" />
           <p className="text-sm font-semibold text-muted-foreground">Loading user profile & history...</p>
         </div>
-      </DashboardLayout>
+
     );
   }
 
   if (userError || !userData?.user) {
     return (
-      <DashboardLayout>
+
         <div className="max-w-4xl mx-auto py-16 text-center glass-card rounded-3xl p-8 border border-border">
           <AlertTriangle className="w-12 h-12 text-destructive mx-auto mb-4" />
           <h2 className="text-xl font-bold mb-2">User Not Found</h2>
@@ -365,7 +365,7 @@ const UserDetailPage = () => {
             <ArrowLeft className="w-4 h-4" /> Back to Users
           </Link>
         </div>
-      </DashboardLayout>
+
     );
   }
 
@@ -373,7 +373,7 @@ const UserDetailPage = () => {
   const stats = userData.stats;
 
   return (
-    <DashboardLayout>
+
       <div className="max-w-6xl mx-auto space-y-8 pb-16">
         {/* ── Top Navigation & Breadcrumbs ── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1379,7 +1379,7 @@ const UserDetailPage = () => {
           </DialogContent>
         </Dialog>
       </div>
-    </DashboardLayout>
+
   );
 };
 
