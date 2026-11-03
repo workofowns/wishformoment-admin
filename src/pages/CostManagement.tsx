@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { fetchApi } from "@/lib/api";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
+
 import {
   Receipt,
   RefreshCw,
@@ -201,7 +201,7 @@ export default function CostManagement() {
   }, [costData, selectedPlatformTab]);
 
   return (
-    <DashboardLayout>
+
       <div className="max-w-7xl mx-auto space-y-8 pb-16">
         {/* ── Top Header with Month Filter ─────────────────────────────────────── */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-8 rounded-2xl shadow-xl border border-slate-800 relative overflow-hidden">
@@ -871,6 +871,6 @@ export default function CostManagement() {
 
 
       </div>
-    </DashboardLayout>
+
   );
 }

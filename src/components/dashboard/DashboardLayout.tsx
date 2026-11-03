@@ -1,9 +1,22 @@
-import { ReactNode, useState, useEffect } from "react";
+import { ReactNode, useState, useEffect, Suspense } from "react";
+import { Outlet } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import DashboardSidebar from "./DashboardSidebar";
 
 interface DashboardLayoutProps {
-  children: ReactNode;
+  children?: ReactNode;
 }
+
+const RouteContentFallback = () => (
+  <div className="w-full min-h-[50vh] flex flex-col items-center justify-center">
+    <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
+      <Loader2 className="w-5 h-5 text-primary animate-spin" />
+    </div>
+    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest animate-pulse">
+      Loading view...
+    </p>
+  </div>
+);
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
@@ -26,7 +39,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           isCollapsed ? "ml-[76px]" : "ml-[220px]"
         }`}
       >
-        {children}
+        <Suspense fallback={<RouteContentFallback />}>
+          {children || <Outlet />}
+        </Suspense>
       </main>
     </div>
   );

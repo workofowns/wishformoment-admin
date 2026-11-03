@@ -21,7 +21,6 @@ import {
   LayoutGrid,
 } from "lucide-react";
 import { toast } from "sonner";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
@@ -193,8 +192,7 @@ export default function Categories() {
   const isLoading = isCatsLoading || isSubsLoading;
 
   return (
-    <DashboardLayout>
-      <div className="w-full max-w-7xl mx-auto space-y-8 pb-16">
+    <div className="w-full max-w-7xl mx-auto space-y-8 pb-16">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
@@ -573,7 +571,6 @@ export default function Categories() {
             })}
           </div>
         )}
-      </div>
 
       {/* Delete Category Confirmation Dialog */}
       <Dialog open={Boolean(deleteCategoryItem)} onOpenChange={() => setDeleteCategoryItem(null)}>
@@ -607,6 +604,6 @@ export default function Categories() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DashboardLayout>
+    </div>
   );
 }

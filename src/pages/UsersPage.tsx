@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
+
 import {
   Search, ChevronDown, ShieldCheck, ShieldAlert, BadgeCheck,
   Trash2, UserCog, Loader2, Eye, ArrowRight, UserCheck
@@ -52,7 +52,7 @@ const UsersPage = () => {
   const filtered = data?.rows || [];
 
   return (
-    <DashboardLayout>
+
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
           <p className="sub-label mb-1">User Management</p>
@@ -264,7 +264,7 @@ const UsersPage = () => {
             ))}
         </div>
       </div>
-    </DashboardLayout>
+
   );
 };
 

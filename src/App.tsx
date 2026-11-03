@@ -5,6 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Loader2 } from "lucide-react";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import "./App.scss";
 
 // ── Lazy-Loaded Pages for Route Code-Splitting ──────────────────────────────
@@ -30,6 +31,7 @@ const CurrencyRates = lazy(() => import("./pages/CurrencyRates"));
 const PaymentHistory = lazy(() => import("./pages/PaymentHistory"));
 const CacheManagement = lazy(() => import("./pages/CacheManagement"));
 const CostManagement = lazy(() => import("./pages/CostManagement"));
+const LogsPage = lazy(() => import("./pages/LogsPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -66,31 +68,45 @@ const App = () => (
       <BrowserRouter>
         <Suspense fallback={<PageFallback />}>
           <Routes>
+            {/* ── Public / Standalone Auth Pages (No Sidebar) ── */}
             <Route path="/login" element={<Login />} />
-            <Route path="/" element={<RequireAuth><Index /></RequireAuth>} />
-            <Route path="/analytics" element={<RequireAuth><Analytics /></RequireAuth>} />
-            <Route path="/rankings" element={<RequireAuth><RankingsPage /></RequireAuth>} />
-            <Route path="/categories" element={<RequireAuth><Categories /></RequireAuth>} />
-            <Route path="/categories/new" element={<RequireAuth><CategoryDetailPage /></RequireAuth>} />
-            <Route path="/categories/:id" element={<RequireAuth><CategoryDetailPage /></RequireAuth>} />
-            <Route path="/categories/:id/edit" element={<RequireAuth><CategoryDetailPage /></RequireAuth>} />
-            <Route path="/templates" element={<RequireAuth><Templates /></RequireAuth>} />
-            <Route path="/templates/new" element={<RequireAuth><TemplateEditorPage /></RequireAuth>} />
-            <Route path="/templates/edit/:id" element={<RequireAuth><TemplateEditorPage /></RequireAuth>} />
-            <Route path="/templates/:id/edit" element={<RequireAuth><TemplateEditorPage /></RequireAuth>} />
-            <Route path="/trending-templates" element={<RequireAuth><TrendingTemplates /></RequireAuth>} />
-            <Route path="/currency-rates" element={<RequireAuth><CurrencyRates /></RequireAuth>} />
-            <Route path="/payments" element={<RequireAuth><PaymentHistory /></RequireAuth>} />
-            <Route path="/costs" element={<RequireAuth><CostManagement /></RequireAuth>} />
-            <Route path="/cache" element={<RequireAuth><CacheManagement /></RequireAuth>} />
-            <Route path="/wishes" element={<RequireAuth><Wishes /></RequireAuth>} />
-            <Route path="/contact" element={<RequireAuth><ContactMessages /></RequireAuth>} />
-            <Route path="/feedback" element={<RequireAuth><FeedbackList /></RequireAuth>} />
-            <Route path="/ai-waitlist" element={<RequireAuth><AIWaitlist /></RequireAuth>} />
-            <Route path="/users" element={<RequireAuth><UsersPage /></RequireAuth>} />
-            <Route path="/users/:id" element={<RequireAuth><UserDetailPage /></RequireAuth>} />
-            <Route path="/media" element={<RequireAuth><Media /></RequireAuth>} />
-            <Route path="/settings" element={<RequireAuth><SettingsPage /></RequireAuth>} />
+
+            {/* ── Authenticated Routes (Wrapped globally with persistent DashboardLayout) ── */}
+            <Route
+              element={
+                <RequireAuth>
+                  <DashboardLayout />
+                </RequireAuth>
+              }
+            >
+              <Route path="/" element={<Index />} />
+              <Route path="/analytics" element={<Analytics />} />
+              <Route path="/rankings" element={<RankingsPage />} />
+              <Route path="/categories" element={<Categories />} />
+              <Route path="/categories/new" element={<CategoryDetailPage />} />
+              <Route path="/categories/:id" element={<CategoryDetailPage />} />
+              <Route path="/categories/:id/edit" element={<CategoryDetailPage />} />
+              <Route path="/templates" element={<Templates />} />
+              <Route path="/templates/new" element={<TemplateEditorPage />} />
+              <Route path="/templates/edit/:id" element={<TemplateEditorPage />} />
+              <Route path="/templates/:id/edit" element={<TemplateEditorPage />} />
+              <Route path="/trending-templates" element={<TrendingTemplates />} />
+              <Route path="/currency-rates" element={<CurrencyRates />} />
+              <Route path="/payments" element={<PaymentHistory />} />
+              <Route path="/costs" element={<CostManagement />} />
+              <Route path="/cache" element={<CacheManagement />} />
+              <Route path="/logs" element={<LogsPage />} />
+              <Route path="/wishes" element={<Wishes />} />
+              <Route path="/contact" element={<ContactMessages />} />
+              <Route path="/feedback" element={<FeedbackList />} />
+              <Route path="/ai-waitlist" element={<AIWaitlist />} />
+              <Route path="/users" element={<UsersPage />} />
+              <Route path="/users/:id" element={<UserDetailPage />} />
+              <Route path="/media" element={<Media />} />
+              <Route path="/settings" element={<SettingsPage />} />
+            </Route>
+
+            {/* ── 404 Standalone Page (No Sidebar) ── */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchApi, getWishUrl } from "@/lib/api";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
+
 import { 
   Sparkles, 
   Search, 
@@ -186,7 +186,7 @@ const Wishes = () => {
   };
 
   return (
-    <DashboardLayout>
+
       <div className="w-full max-w-7xl mx-auto space-y-6 pb-12">
         {/* Header */}
         <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -815,7 +815,7 @@ const Wishes = () => {
           )}
         </AnimatePresence>
       </div>
-    </DashboardLayout>
+
   );
 };
 

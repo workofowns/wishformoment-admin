@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi, getWishUrl } from "@/lib/api";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
+
 import {
   CreditCard,
   Search,
@@ -179,7 +179,7 @@ const PaymentHistory = () => {
   const totalPages = data?.totalPages ?? 1;
 
   return (
-    <DashboardLayout>
+
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
@@ -496,7 +496,7 @@ const PaymentHistory = () => {
           </div>
         )}
       </div>
-    </DashboardLayout>
+
   );
 };
 

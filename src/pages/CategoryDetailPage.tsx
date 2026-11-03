@@ -27,7 +27,6 @@ import {
   LayoutGrid,
 } from "lucide-react";
 import { toast } from "sonner";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { GradientColorPicker } from "@/components/ui/GradientColorPicker";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -415,39 +414,35 @@ export default function CategoryDetailPage() {
 
   if (!isNew && isLoading) {
     return (
-      <DashboardLayout>
-        <div className="max-w-6xl mx-auto py-20 flex flex-col items-center justify-center gap-4 text-center">
-          <div className="w-10 h-10 border-3 border-primary/20 border-t-primary rounded-full animate-spin" />
-          <p className="text-sm font-semibold text-muted-foreground">Loading category details...</p>
-        </div>
-      </DashboardLayout>
+      <div className="max-w-6xl mx-auto py-20 flex flex-col items-center justify-center gap-4 text-center">
+        <div className="w-10 h-10 border-3 border-primary/20 border-t-primary rounded-full animate-spin" />
+        <p className="text-sm font-semibold text-muted-foreground">Loading category details...</p>
+      </div>
     );
   }
 
   if (!isNew && (isError || !category)) {
     return (
-      <DashboardLayout>
-        <div className="max-w-3xl mx-auto py-16 text-center glass-card rounded-3xl p-8 border border-border">
-          <AlertTriangle className="w-12 h-12 text-destructive mx-auto mb-4" />
-          <h2 className="text-xl font-bold mb-2">Category Not Found</h2>
-          <p className="text-sm text-muted-foreground mb-6">
-            The requested category does not exist or has been removed.
-          </p>
-          <button
-            onClick={() => navigate("/categories")}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl btn-primary text-white text-xs font-bold"
-          >
-            <ArrowLeft className="w-4 h-4" /> Back to Categories
-          </button>
-        </div>
-      </DashboardLayout>
+      <div className="max-w-3xl mx-auto py-16 text-center glass-card rounded-3xl p-8 border border-border">
+        <AlertTriangle className="w-12 h-12 text-destructive mx-auto mb-4" />
+        <h2 className="text-xl font-bold mb-2">Category Not Found</h2>
+        <p className="text-sm text-muted-foreground mb-6">
+          The requested category does not exist or has been removed.
+        </p>
+        <button
+          onClick={() => navigate("/categories")}
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl btn-primary text-white text-xs font-bold"
+        >
+          <ArrowLeft className="w-4 h-4" /> Back to Categories
+        </button>
+      </div>
     );
   }
 
   const subcategoriesList = category?.subcategories || [];
 
   return (
-    <DashboardLayout>
+    <>
       <div className="max-w-7xl mx-auto space-y-8 pb-20">
         {/* Top Navigation & Breadcrumbs Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1448,6 +1443,6 @@ export default function CategoryDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </DashboardLayout>
+    </>
   );
 }

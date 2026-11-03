@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
+
 import { motion } from "framer-motion";
 import { Globe, Bell, Shield, Save, Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
@@ -110,7 +110,7 @@ const SettingsPage = () => {
   };
 
   return (
-    <DashboardLayout>
+
       <div className="max-w-4xl mx-auto space-y-6 pb-12">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border/40">
@@ -423,7 +423,7 @@ const SettingsPage = () => {
           </div>
         )}
       </div>
-    </DashboardLayout>
+
   );
 };
 
