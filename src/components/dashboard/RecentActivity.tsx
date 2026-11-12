@@ -62,6 +62,11 @@ const RecentActivity = () => {
       let currency = incoming.data?.currency || "INR";
 
       const action = (incoming.action || "").toLowerCase();
+      // Page view telemetry belongs exclusively in the Analytics live stream, not transactional activity
+      if (action.includes("viewed")) {
+        return;
+      }
+
       if (action.includes("payment paid") || action.includes("paid")) {
         resolvedType = "payment_paid";
         details = incoming.data?.template_name || "Premium wish purchase";

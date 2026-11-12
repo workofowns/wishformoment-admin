@@ -41,6 +41,7 @@ const Analytics = () => {
             'created wish': Activity,
             'shared wish': Share2,
             'viewed wish': Eye,
+            'viewed template': Eye,
             'new signup': Users,
             'user login': Zap
          };
@@ -49,6 +50,7 @@ const Analytics = () => {
             'created wish': 'text-blue-500',
             'shared wish': 'text-purple-500',
             'viewed wish': 'text-amber-500',
+            'viewed template': 'text-indigo-500',
             'new signup': 'text-emerald-500',
             'user login': 'text-rose-500'
          };
