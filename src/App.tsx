@@ -32,6 +32,7 @@ const PaymentHistory = lazy(() => import("./pages/PaymentHistory"));
 const CacheManagement = lazy(() => import("./pages/CacheManagement"));
 const CostManagement = lazy(() => import("./pages/CostManagement"));
 const LogsPage = lazy(() => import("./pages/LogsPage"));
+const VideoManagement = lazy(() => import("./pages/VideoManagement"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -96,6 +97,7 @@ const App = () => (
               <Route path="/costs" element={<CostManagement />} />
               <Route path="/cache" element={<CacheManagement />} />
               <Route path="/logs" element={<LogsPage />} />
+              <Route path="/videos" element={<VideoManagement />} />
               <Route path="/wishes" element={<Wishes />} />
               <Route path="/contact" element={<ContactMessages />} />
               <Route path="/feedback" element={<FeedbackList />} />

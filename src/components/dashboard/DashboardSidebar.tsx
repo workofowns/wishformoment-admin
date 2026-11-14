@@ -19,6 +19,7 @@ import {
   Database,
   Trophy,
   Terminal,
+  Video,
   ChevronLeft,
   ChevronRight,
   LucideIcon,
@@ -66,6 +67,7 @@ const navGroups: NavGroup[] = [
       { icon: Receipt, label: "Cloud Costs", path: "/costs" },
       { icon: Database, label: "Redis Cache", path: "/cache" },
       { icon: Terminal, label: "Server Logs", path: "/logs" },
+      { icon: Video, label: "Video Engine", path: "/videos" },
     ],
   },
   {
